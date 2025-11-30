@@ -91,7 +91,7 @@ wget https://dl.armbian.com/bananapif3/Trixie_current_minimal.asc
 
 ```bash
 # Check the SHA256 hash
-sha256sum -c Trixie_current_minimal.sha
+sha256sum -c Armbian_*.img.xz.sha
 
 # Expected output:
 # Armbian_25.11.1_Bananapif3_trixie_current_6.6.99_minimal.img.xz: OK
@@ -107,7 +107,7 @@ wget https://apt.armbian.com/armbian.key
 gpg --import armbian.key
 
 # Verify the signature
-gpg --verify Trixie_current_minimal.asc Armbian_*.img.xz
+gpg --verify Armbian_*.img.xz.asc Armbian_*.img.xz
 
 # Expected output should include:
 # gpg: Good signature from "Armbian"
@@ -197,7 +197,7 @@ rm Armbian_*.img.xz
 wget https://dl.armbian.com/bananapif3/Trixie_current_minimal
 
 # Verify again
-sha256sum -c Trixie_current_minimal.sha
+sha256sum -c Armbian_*.img.xz.sha
 ```
 
 ### File Corruption During Download
