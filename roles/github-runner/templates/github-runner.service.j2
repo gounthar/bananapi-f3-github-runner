@@ -1,0 +1,18 @@
+[Unit]
+Description=GitHub Actions Runner (github-act-runner)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User={{ runner_user }}
+WorkingDirectory={{ runner_workdir }}
+ExecStart={{ runner_workdir }}/github-act-runner run
+Restart=always
+RestartSec=5
+KillMode=process
+KillSignal=SIGINT
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=multi-user.target

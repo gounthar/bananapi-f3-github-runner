@@ -1,0 +1,54 @@
+---
+- name: Update system packages
+  apt:
+    upgrade: dist
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install essential packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - git-lfs
+      - jq
+      - vim
+      - htop
+      - tmux
+      - net-tools
+      - iputils-ping
+      - dnsutils
+      - ca-certificates
+      - openssl
+      - gnupg
+      - python3
+      - python3-pip
+      - unzip
+      - zip
+      - bzip2
+      - xz-utils
+    state: present
+
+- name: Configure timezone
+  timezone:
+    name: "{{ timezone | default('UTC') }}"
+  when: timezone is defined
+
+- name: Ensure user is in sudo group
+  user:
+    name: "{{ runner_user }}"
+    groups: sudo
+    append: yes
+
+- name: Configure sysctl for better performance
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: 'vm.swappiness', value: '10' }
+    - { name: 'vm.vfs_cache_pressure', value: '50' }
+    - { name: 'fs.file-max', value: '2097152' }
+  when: optimize_system | default(true)

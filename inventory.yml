@@ -1,0 +1,29 @@
+---
+all:
+  hosts:
+    bananapi-f3:
+      ansible_host: "{{ lookup('env', 'BANANAPI_IP') | default('192.168.1.185', true) }}"
+      ansible_user: "{{ lookup('env', 'SSH_USER') | default('poddingue', true) }}"
+      ansible_python_interpreter: /usr/bin/python3
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  vars:
+    # GitHub Configuration
+    github_repository: "{{ lookup('env', 'GITHUB_REPOSITORY') | default('', true) }}"
+    github_pat: "{{ lookup('env', 'GITHUB_PAT') | default('', true) }}"
+
+    # Runner Configuration
+    runner_name: "{{ lookup('env', 'RUNNER_NAME') | default('bananapi-f3-runner', true) }}"
+    runner_workdir: "{{ lookup('env', 'RUNNER_WORKDIR') | default('/home/poddingue/github-act-runner-test', true) }}"
+    runner_user: "{{ lookup('env', 'RUNNER_USER') | default('poddingue', true) }}"
+    runner_version: "{{ lookup('env', 'RUNNER_VERSION') | default('main', true) }}"
+
+    # System Configuration
+    go_version: "{{ lookup('env', 'GO_VERSION') | default('1.24.4', true) }}"
+    docker_log_max_size: "10m"
+    docker_log_max_file: "3"
+
+    # Optional Features
+    enable_metrics: "{{ lookup('env', 'ENABLE_METRICS') | default('false', true) }}"
+    auto_cleanup: "{{ lookup('env', 'AUTO_CLEANUP') | default('true', true) }}"
+    cleanup_threshold: "{{ lookup('env', 'CLEANUP_THRESHOLD') | default('80', true) }}"

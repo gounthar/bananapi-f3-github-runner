@@ -1,0 +1,64 @@
+---
+- name: Add RISC-V64 Docker APT repository GPG key
+  apt_key:
+    url: https://github.com/gounthar/docker-for-riscv64/releases/download/gpg-key/gpg-public-key.asc
+    state: present
+
+- name: Add RISC-V64 Docker APT repository
+  apt_repository:
+    repo: "deb [arch=riscv64] https://gounthar.github.io/docker-for-riscv64 trixie main"
+    state: present
+    filename: docker-riscv64
+    update_cache: yes
+
+- name: Install Docker packages from RISC-V64 repository
+  apt:
+    name:
+      - docker.io
+      - docker-cli
+      - docker-compose-plugin
+      - docker-buildx-plugin
+      - containerd
+      - runc
+      - tini
+      - tini-static
+      - cagent
+    state: present
+    update_cache: yes
+
+- name: Create Docker daemon configuration directory
+  file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Configure Docker daemon
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  notify: restart docker
+
+- name: Ensure Docker service is enabled and running
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+
+- name: Add runner user to docker group
+  user:
+    name: "{{ runner_user }}"
+    groups: docker
+    append: yes
+
+- name: Test Docker installation
+  command: docker run --rm hello-world
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: docker_test
+  failed_when: docker_test.rc != 0
+
+- name: Clean up Docker test container
+  command: docker system prune -f
+  become_user: "{{ runner_user }}"
+  changed_when: false

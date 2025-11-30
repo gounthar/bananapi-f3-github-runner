@@ -1,0 +1,129 @@
+# Banana Pi F3 GitHub Runner - Required Packages
+# This file lists all packages that should be installed
+
+# === Core Build Tools ===
+build-essential
+gcc
+g++
+make
+cmake
+autoconf
+automake
+libtool
+pkg-config
+
+# === Version Control ===
+git
+git-lfs
+
+# === GitHub CLI ===
+gh
+
+# === Go Language (for building runner) ===
+golang
+golang-1.24
+golang-1.24-go
+golang-1.24-src
+golang-1.24-doc
+golang-go
+golang-src
+golang-doc
+
+# === Docker and Container Tools ===
+docker.io
+docker-cli
+docker-compose-plugin
+docker-buildx-plugin
+containerd
+runc
+
+# === Debian Packaging Tools ===
+debhelper
+dh-make
+dpkg-dev
+lintian
+devscripts
+libdistro-info-perl
+fakeroot
+quilt
+
+# === APT Repository Management ===
+reprepro
+createrepo-c
+gnupg
+gpg
+
+# === RPM Packaging Tools ===
+rpm
+rpm-common
+rpm2cpio
+rpmbuild
+rpmlint
+python3-rpm
+librpm10
+librpmbuild10
+librpmio10
+librpmsign10
+
+# === Utilities ===
+curl
+wget
+jq
+yq
+htop
+tmux
+screen
+vim
+nano
+less
+tree
+rsync
+unzip
+zip
+bzip2
+xz-utils
+
+# === Network Tools ===
+net-tools
+iputils-ping
+dnsutils
+netcat-openbsd
+
+# === System Monitoring ===
+sysstat
+iotop
+ncdu
+
+# === Python (for Ansible and scripts) ===
+python3
+python3-pip
+python3-venv
+python3-apt
+
+# === SSL/TLS ===
+ca-certificates
+openssl
+libssl-dev
+
+# === Compression Libraries ===
+zlib1g-dev
+libbz2-dev
+liblzma-dev
+
+# === Build Dependencies (common) ===
+libffi-dev
+libncurses5-dev
+libreadline-dev
+libsqlite3-dev
+libgdbm-dev
+libnss3-dev
+
+# === Optional: Performance Tools ===
+# perf-tools-unstable
+# linux-perf
+
+# === Optional: Debugging Tools ===
+# gdb
+# strace
+# ltrace
+# valgrind

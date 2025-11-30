@@ -1,0 +1,52 @@
+---
+- name: Setup Banana Pi F3 as GitHub Actions Runner
+  hosts: bananapi-f3
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - github_repository is defined and github_repository != ''
+          - github_pat is defined and github_pat != ''
+        fail_msg: "GitHub repository and PAT must be set in .env file"
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+  roles:
+    - common
+    - docker
+    - build-tools
+    - github-runner
+
+  post_tasks:
+    - name: Display runner status
+      systemd:
+        name: github-runner
+        state: started
+      register: runner_status
+
+    - name: Show setup summary
+      debug:
+        msg:
+          - "========================================"
+          - "GitHub Runner Setup Complete!"
+          - "========================================"
+          - "Runner Name: {{ runner_name }}"
+          - "Repository: {{ github_repository }}"
+          - "Working Directory: {{ runner_workdir }}"
+          - "Service Status: {{ runner_status.status.ActiveState }}"
+          - ""
+          - "Check runner status with:"
+          - "  sudo systemctl status github-runner"
+          - ""
+          - "View logs with:"
+          - "  sudo journalctl -u github-runner -f"
+          - ""
+          - "Verify in GitHub UI at:"
+          - "  {{ github_repository }}/settings/actions/runners"
+          - "========================================"

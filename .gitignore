@@ -1,0 +1,55 @@
+# Secrets and environment files
+.env
+*.token
+*.key
+settings.json
+sessions.json
+
+# SSH keys
+*.pem
+*.ppk
+id_rsa*
+id_ed25519*
+
+# Ansible
+*.retry
+.ansible/
+ansible.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Runner workspace
+_work/
+runner.log
+build.log

@@ -1,0 +1,77 @@
+---
+- name: Install build essential tools
+  apt:
+    name:
+      - build-essential
+      - gcc
+      - g++
+      - make
+      - cmake
+      - autoconf
+      - automake
+      - libtool
+      - pkg-config
+    state: present
+
+- name: Install Go compiler
+  apt:
+    name:
+      - golang
+      - golang-1.24
+      - golang-1.24-go
+      - golang-1.24-src
+      - golang-go
+      - golang-src
+    state: present
+
+- name: Verify Go installation
+  command: go version
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: go_version_output
+
+- name: Display Go version
+  debug:
+    msg: "Installed: {{ go_version_output.stdout }}"
+
+- name: Install Debian packaging tools
+  apt:
+    name:
+      - debhelper
+      - dh-make
+      - dpkg-dev
+      - lintian
+      - devscripts
+      - libdistro-info-perl
+      - fakeroot
+      - quilt
+      - reprepro
+      - gnupg
+      - gpg
+    state: present
+
+- name: Install RPM packaging tools
+  apt:
+    name:
+      - rpm
+      - rpm-common
+      - rpm2cpio
+      - rpmlint
+      - python3-rpm
+      - createrepo-c
+    state: present
+
+- name: Install GitHub CLI
+  apt:
+    name: gh
+    state: present
+
+- name: Verify GitHub CLI installation
+  command: gh --version
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: gh_version_output
+
+- name: Display GitHub CLI version
+  debug:
+    msg: "Installed: {{ gh_version_output.stdout }}"
