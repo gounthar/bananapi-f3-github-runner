@@ -1,16 +1,25 @@
 # Banana Pi F3 GitHub Actions Runner Setup
 
-Complete documentation and automation for setting up a Banana Pi F3 as a self-hosted GitHub Actions runner for RISC-V64 builds.
+**Complete documentation and automation** for setting up a Banana Pi F3 as a self-hosted GitHub Actions runner for RISC-V64 builds - **from unboxing to production deployment**.
 
 ## Overview
 
-This repository contains everything needed to replicate the Banana Pi F3 GitHub Actions runner setup, including:
+This repository provides **end-to-end documentation** of the complete journey from unboxing a Banana Pi F3 to running a production GitHub Actions runner, including:
 
-- **Ansible playbooks** for automated installation
-- **Systemd service configuration** for runner management
-- **Complete package lists** for Debian/RPM development
-- **Step-by-step manual setup guide** as a fallback
-- **Security best practices** for runner deployment
+- 📦 **Hardware setup guides** - Step-by-step from unboxing to ready system
+- 🤖 **Ansible playbooks** - Fully automated installation
+- ⚙️ **Systemd service configuration** - Production-grade runner management
+- 📋 **Complete package lists** - All tools for Debian/RPM development
+- 📖 **Comprehensive documentation** - Manual setup guide as fallback
+- 🔒 **Security best practices** - Hardened runner deployment
+- 📝 **Session journals** - Detailed technical articles from each work session
+
+### Documentation Structure
+
+1. **[docs/hardware/](docs/hardware/)** - Hardware setup guides (unboxing → ready for automation)
+2. **[playbooks/](playbooks/)** - Ansible automation
+3. **[journal/](journal/)** - Session-based technical articles
+4. **[docs/](docs/)** - Architecture, security, troubleshooting
 
 ## Hardware Specifications
 
@@ -35,14 +44,47 @@ This runner is used for:
 - Creating RPM packages for RISC-V64
 - Running on repository: https://github.com/gounthar/docker-for-riscv64
 
-## Quick Start
+## Getting Started
+
+### Two Paths Available
+
+**Path 1: Complete Journey (Hardware → Production)**
+- Start from scratch with a new Banana Pi F3
+- Follow the [Hardware Setup Guides](docs/hardware/)
+- Great for first-time setup or documentation
+
+**Path 2: Automated Setup (Already Have Armbian)**
+- Skip to Ansible automation if Armbian is already installed
+- See [Automated Setup](#automated-setup-recommended) below
 
 ### Prerequisites
 
-- Fresh Banana Pi F3 with Armbian installed
+**For Hardware Setup (Path 1):**
+- Banana Pi F3 board (new or reset)
+- Power supply (USB-C, 5V/3A minimum)
+- microSD card (16GB+, Class 10 or better)
+- Ethernet cable
+- Computer with SD card reader
+
+**For Automated Setup (Path 2):**
+- Banana Pi F3 with Armbian installed
 - SSH access to the device
 - Ansible installed on your control machine
 - GitHub personal access token (for runner registration)
+
+### Hardware Setup (Path 1)
+
+If starting from scratch, follow these guides in order:
+
+1. [01-unboxing.md](docs/hardware/01-unboxing.md) - Unboxing and hardware overview
+2. [02-armbian-download.md](docs/hardware/02-armbian-download.md) - Download and verify Armbian
+3. [03-sd-card-setup.md](docs/hardware/03-sd-card-setup.md) - Prepare SD card
+4. [04-first-boot.md](docs/hardware/04-first-boot.md) - Initial boot and configuration
+5. [05-emmc-transfer.md](docs/hardware/05-emmc-transfer.md) - Transfer to eMMC
+6. [06-ssh-hardening.md](docs/hardware/06-ssh-hardening.md) - Secure SSH access
+7. [07-system-preparation.md](docs/hardware/07-system-preparation.md) - Prepare for automation
+
+After completing hardware setup, proceed to Automated Setup below.
 
 ### Automated Setup (Recommended)
 
@@ -69,33 +111,54 @@ See [MANUAL_SETUP.md](MANUAL_SETUP.md) for step-by-step manual installation inst
 
 ```
 .
-├── README.md                       # This file
+├── README.md                       # This file - project overview
 ├── MANUAL_SETUP.md                 # Step-by-step manual setup guide
+├── LICENSE                         # MIT License
 ├── .env.example                    # Environment variable template
+├── .env                            # Actual secrets (NEVER commit)
 ├── .gitignore                      # Git ignore patterns
 ├── inventory.yml                   # Ansible inventory
-├── playbooks/
-│   ├── setup-runner.yml            # Main playbook for runner setup
-│   ├── install-packages.yml        # Package installation playbook
-│   ├── configure-docker.yml        # Docker configuration playbook
-│   └── setup-systemd.yml           # Systemd service setup
-├── roles/
+├── packages.list                   # Required Debian packages
+│
+├── docs/                           # Documentation
+│   ├── hardware/                   # Hardware setup guides (Path 1)
+│   │   ├── README.md               # Hardware setup overview
+│   │   ├── 01-unboxing.md          # Unboxing and hardware overview
+│   │   ├── 02-armbian-download.md  # Downloading Armbian
+│   │   ├── 03-sd-card-setup.md     # SD card preparation
+│   │   ├── 04-first-boot.md        # Initial boot and config
+│   │   ├── 05-emmc-transfer.md     # Transfer to eMMC
+│   │   ├── 06-ssh-hardening.md     # SSH security
+│   │   └── 07-system-preparation.md # Final prep for automation
+│   ├── images/                     # Screenshots and diagrams
+│   ├── ARCHITECTURE.md             # System architecture details
+│   ├── SECURITY.md                 # Security considerations
+│   └── TROUBLESHOOTING.md          # Common issues and solutions
+│
+├── journal/                        # Session documentation
+│   ├── README.md                   # About session journals
+│   └── session_*.adoc              # Technical articles (auto-generated)
+│
+├── playbooks/                      # Ansible automation
+│   └── setup-runner.yml            # Main playbook for runner setup
+│
+├── roles/                          # Ansible roles
 │   ├── common/                     # Common system configuration
+│   │   └── tasks/main.yml
 │   ├── docker/                     # Docker installation and config
+│   │   ├── tasks/main.yml
+│   │   ├── templates/daemon.json.j2
+│   │   └── handlers/main.yml
 │   ├── build-tools/                # Build tools installation
-│   ├── github-runner/              # GitHub runner installation
-│   └── monitoring/                 # Optional monitoring setup
-├── templates/
-│   ├── github-runner.service.j2    # Systemd service template
-│   ├── settings.json.j2            # Runner settings template
-│   └── docker-daemon.json.j2       # Docker daemon configuration
-├── files/
-│   ├── packages.list               # Required Debian packages
-│   └── sysctl.conf                 # Kernel tuning parameters
-└── docs/
-    ├── ARCHITECTURE.md             # System architecture details
-    ├── TROUBLESHOOTING.md          # Common issues and solutions
-    └── SECURITY.md                 # Security considerations
+│   │   └── tasks/main.yml
+│   └── github-runner/              # GitHub runner installation
+│       ├── tasks/main.yml
+│       ├── templates/github-runner.service.j2
+│       └── handlers/main.yml
+│
+└── .claude/                        # Claude Code configuration
+    ├── CLAUDE.md                   # Project guidance for Claude
+    └── CONTEXT.md                  # Current progress tracking
 ```
 
 ## Software Installed
