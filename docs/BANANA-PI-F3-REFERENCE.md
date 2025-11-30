@@ -20,7 +20,7 @@ Our unit: **16GB LPDDR4**
 Our unit: **128GB eMMC**
 - eMMC options: 8GB / 16GB / 32GB / 128GB
 - MicroSD card slot (for boot/expansion)
-- M.2 slot supporting SATA expansion (PCIe 2.1, 2-lane × 2)
+- M.2 slot supporting NVMe SSD expansion (PCIe 2.1, 2-lane × 2)
 
 ### Connectivity
 - **Ethernet**: 2x Gigabit Ethernet (PoE capable)
@@ -31,7 +31,7 @@ Our unit: **128GB eMMC**
 - **Camera**: Dual MIPI-CSI interfaces (16M and 8M modules available)
 
 ### GPIO Header
-- **Pinout**: 26-pin GPIO header
+- **Pinout**: 40-pin GPIO header
 - **Interfaces**: UART, SPI, I2C
 - **Voltage levels**: 3.3V and 5V supply available
 - **GPIO pins**: GPIO_70-74, GPIO_91-92, GPIO_49-50 (among others)
@@ -151,7 +151,7 @@ According to official documentation, SpacemiT K1 is optimized for:
 
 ### M.2 Slot
 - **Type**: PCIe 2.1 (2-lane × 2)
-- **Use**: SATA SSD expansion
+- **Use**: NVMe SSD expansion
 - **Benefit**: Additional fast storage for build cache
 
 **Future Enhancement:**
@@ -164,7 +164,7 @@ According to official documentation, SpacemiT K1 is optimized for:
 - External USB storage possible
 - USB network adapters supported
 
-## GPIO Pinout (26-pin Header)
+## GPIO Pinout (40-pin Header)
 
 ```
 Pin  Function         Pin  Function

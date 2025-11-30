@@ -173,7 +173,8 @@ cat /etc/ssh/sshd_config.d/99-hardening.conf
 **Features:**
 - `X11Forwarding no` - Disable X11 (not needed for headless server)
 - `PermitTunnel no` - Disable tunneling (reduce attack surface)
-- `AllowAgentForwarding yes` - Allow SSH agent forwarding (useful for Git)
+- `AllowAgentForwarding yes` - Allow SSH agent forwarding (useful for Git operations)
+  - ⚠️ **Security Note**: Agent forwarding allows the remote server to use your local SSH keys. If the server is compromised, an attacker could use your forwarded agent to authenticate as you. For CI/CD runners, consider using deploy keys instead of agent forwarding for production environments.
 - `AllowTcpForwarding yes` - Allow port forwarding (useful for development)
 
 **Cryptography:**
