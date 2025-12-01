@@ -61,6 +61,23 @@
       - createrepo-c
     state: present
 
+- name: Install Node.js (required for docker-cagent RPM builds)
+  apt:
+    name:
+      - nodejs
+      - npm
+    state: present
+
+- name: Verify Node.js installation
+  command: node --version
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: node_version_output
+
+- name: Display Node.js version
+  debug:
+    msg: "Installed: {{ node_version_output.stdout }}"
+
 - name: Install GitHub CLI
   apt:
     name: gh
