@@ -127,7 +127,7 @@ ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-run
 
 #### GitHub PAT Requirements
 
-Create a Personal Access Token at https://github.com/settings/tokens with these scopes:
+Create a Personal Access Token at <https://github.com/settings/tokens> with these scopes:
 - `repo` - Full control of private repositories
 - `workflow` - Update GitHub Action workflows
 

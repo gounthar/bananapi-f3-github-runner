@@ -175,7 +175,7 @@ validate_github_pat() {
     echo -e "  PAT scopes:${scopes}"
 
     # Verify both required scopes are present
-    if ! (echo "$scopes" | grep -q "repo" && echo "$scopes" | grep -q "workflow"); then
+    if ! (echo "$scopes" | grep -qw "repo" && echo "$scopes" | grep -qw "workflow"); then
         echo -e "${RED}  [FAIL] PAT is missing required scopes ('repo', 'workflow').${NC}"
         echo "  Please create a new token with these scopes at:"
         echo "  https://github.com/settings/tokens"
@@ -290,6 +290,9 @@ TELEGRAM_BOT_TOKEN=
 # Telegram chat ID
 TELEGRAM_CHAT_ID=
 EOF
+
+    # Secure file permissions - only owner can read sensitive credentials
+    chmod 600 "$ENV_FILE"
 
     echo -e "${GREEN}  [OK] Configuration saved${NC}"
     echo ""
