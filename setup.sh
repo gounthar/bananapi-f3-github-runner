@@ -31,7 +31,7 @@ check_dependencies() {
         echo -e "${RED}  [MISSING] ansible-playbook${NC}"
         echo "    Install on Debian/Ubuntu: sudo apt install ansible"
     else
-        echo -e "${GREEN}  [OK] ansible-playbook$(NC}"
+        echo -e "${GREEN}  [OK] ansible-playbook${NC}"
     fi
 
     # Check for SSH
@@ -174,9 +174,14 @@ validate_github_pat() {
 
     echo -e "  PAT scopes:${scopes}"
 
-    if [[ "$scopes" != *"repo"* ]]; then
-        echo -e "${YELLOW}  [WARN] PAT may be missing 'repo' scope${NC}"
+    # Verify both required scopes are present
+    if ! (echo "$scopes" | grep -q "repo" && echo "$scopes" | grep -q "workflow"); then
+        echo -e "${RED}  [FAIL] PAT is missing required scopes ('repo', 'workflow').${NC}"
+        echo "  Please create a new token with these scopes at:"
+        echo "  https://github.com/settings/tokens"
+        exit 1
     fi
+    echo -e "${GREEN}  [OK] Required scopes present${NC}"
 
     echo ""
 }
@@ -198,7 +203,9 @@ test_ssh_connection() {
         fi
     fi
 
-    if ssh -i "$ssh_key" -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+    # Use accept-new to accept keys on first connection but reject if host key changes
+    # This is more secure than StrictHostKeyChecking=no which disables verification entirely
+    if ssh -i "$ssh_key" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
         "${SSH_USER}@${BANANAPI_IP}" "echo 'SSH connection successful'" 2>/dev/null; then
         echo -e "${GREEN}  [OK] SSH connection to ${BANANAPI_IP} successful${NC}"
     else
