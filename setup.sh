@@ -123,6 +123,11 @@ prompt_config() {
     read -p "SSH Username [${SSH_USER:-poddingue}]: " input
     SSH_USER="${input:-${SSH_USER:-poddingue}}"
 
+    if [ -z "$SSH_USER" ]; then
+        echo -e "${RED}Error: SSH Username is required${NC}"
+        exit 1
+    fi
+
     # Runner working directory
     read -p "Runner Working Directory [${RUNNER_WORKDIR:-/home/${SSH_USER}/github-act-runner}]: " input
     RUNNER_WORKDIR="${input:-${RUNNER_WORKDIR:-/home/${SSH_USER}/github-act-runner}}"
