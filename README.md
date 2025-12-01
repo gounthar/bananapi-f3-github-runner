@@ -88,20 +88,50 @@ After completing hardware setup, proceed to Automated Setup below.
 
 ### Automated Setup (Recommended)
 
+The easiest way to set up the runner is using the interactive setup script:
+
 ```bash
 # Clone this repository
 git clone https://github.com/YOUR_USERNAME/bananapi-f3-github-runner.git
 cd bananapi-f3-github-runner
 
+# Run the interactive setup script
+./setup.sh
+```
+
+The setup script will:
+1. **Check dependencies** - Verifies Ansible, SSH, and curl are installed
+2. **Prompt for configuration**:
+   - GitHub repository (e.g., `username/repo`)
+   - GitHub Personal Access Token (PAT) - requires `repo` and `workflow` scopes
+   - **Runner name** (unique identifier - important to avoid conflicts!)
+   - Banana Pi IP address
+   - SSH username
+3. **Validate credentials** - Tests PAT and SSH connectivity before proceeding
+4. **Save configuration** - Stores settings in `.env` file
+5. **Run Ansible** - Automatically deploys the runner
+
+#### Manual Ansible Setup
+
+If you prefer to configure manually:
+
+```bash
 # Copy and configure your secrets
 cp .env.example .env
 nano .env  # Add your GitHub token and other secrets
 
-# Run the Ansible playbook
-ansible-playbook -i inventory.yml playbooks/setup-runner.yml
-
-# The runner will be installed and configured automatically
+# Source environment and run Ansible
+source .env
+ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-runner.yml
 ```
+
+#### GitHub PAT Requirements
+
+Create a Personal Access Token at <https://github.com/settings/tokens> with these scopes:
+- `repo` - Full control of private repositories
+- `workflow` - Update GitHub Action workflows
+
+**Important**: The runner uses `--pat` (Personal Access Token) authentication, not `--token` (registration token). This allows the PAT to be reused without generating new registration tokens from GitHub UI.
 
 ### Manual Setup
 
@@ -112,6 +142,7 @@ See [MANUAL_SETUP.md](MANUAL_SETUP.md) for step-by-step manual installation inst
 ```
 .
 ├── README.md                       # This file - project overview
+├── setup.sh                        # Interactive setup script (recommended)
 ├── MANUAL_SETUP.md                 # Step-by-step manual setup guide
 ├── LICENSE                         # MIT License
 ├── .env.example                    # Environment variable template
@@ -236,10 +267,12 @@ WantedBy=multi-user.target
 ### Runner Configuration
 
 The runner is configured with:
-- **Name**: bananapi-f3-runner
+- **Name**: User-defined (e.g., `bananapi-f3-runner-emmc`) - must be unique per repository
 - **Labels**: self-hosted, linux, riscv64
 - **Max Parallelism**: 1 (single job at a time)
-- **Repository**: https://github.com/gounthar/docker-for-riscv64
+- **Repository**: Configurable via setup script
+
+**Note**: Each runner name must be unique within the repository. If you have multiple runners (e.g., one on SD card, one on eMMC), use distinct names like `bananapi-f3-sd` and `bananapi-f3-emmc`.
 
 ## Environment Variables
 
@@ -385,5 +418,5 @@ For issues specific to:
 
 ---
 
-**Last Updated**: 2025-11-30
+**Last Updated**: 2025-12-01
 **Tested On**: Banana Pi F3, Armbian 25.8.2 (Debian Trixie)

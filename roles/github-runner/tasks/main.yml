@@ -39,36 +39,37 @@
     mode: '0755'
   when: not runner_binary.stat.exists
 
-- name: Create runner settings from template
-  template:
-    src: settings.json.j2
-    dest: "{{ runner_workdir }}/settings.json"
-    owner: "{{ runner_user }}"
-    group: "{{ runner_user }}"
-    mode: '0600'
-  when: github_pat != ''
-  no_log: true
+# Note: This project uses github-act-runner (ChristopherHX's fork) which is compatible with RISC-V64.
+# Unlike the official GitHub Actions runner which uses '.runner' as its configuration file,
+# github-act-runner stores its configuration in 'settings.json' after running 'configure'.
+- name: Check if runner is already configured
+  stat:
+    path: "{{ runner_workdir }}/settings.json"
+  register: runner_config
 
 - name: Configure runner (if not already configured)
   command: >
     {{ runner_workdir }}/github-act-runner configure
-    --url {{ github_repository }}
-    --token {{ github_pat }}
+    --url https://github.com/{{ github_repository }}
+    --pat {{ github_pat }}
     --name {{ runner_name }}
     --labels self-hosted,linux,riscv64
     --work _work
+    --unattended
   args:
     chdir: "{{ runner_workdir }}"
   become_user: "{{ runner_user }}"
   environment:
     HOME: "/home/{{ runner_user }}"
-  when: >
-    github_pat != '' and
-    (not runner_binary.stat.exists or
-     (settings_check.stat.exists is defined and not settings_check.stat.exists))
+  when: github_pat != '' and not runner_config.stat.exists
   no_log: true
   register: configure_result
   failed_when: configure_result.rc != 0 and 'already configured' not in configure_result.stderr
+
+- name: Display configuration result (without secrets)
+  debug:
+    msg: "Runner configuration completed with return code: {{ configure_result.rc | default('skipped') }}"
+  when: configure_result is defined and configure_result.rc is defined
 
 - name: Create systemd service file
   template:

@@ -1,12 +1,20 @@
 ---
-- name: Add RISC-V64 Docker APT repository GPG key
-  apt_key:
+# Modern GPG key handling for Debian 12+ (apt-key is deprecated)
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download RISC-V64 Docker APT repository GPG key
+  get_url:
     url: https://github.com/gounthar/docker-for-riscv64/releases/download/gpg-key/gpg-public-key.asc
-    state: present
+    dest: /etc/apt/keyrings/docker-riscv64.asc
+    mode: '0644'
 
 - name: Add RISC-V64 Docker APT repository
   apt_repository:
-    repo: "deb [arch=riscv64] https://gounthar.github.io/docker-for-riscv64 trixie main"
+    repo: "deb [arch=riscv64 signed-by=/etc/apt/keyrings/docker-riscv64.asc] https://gounthar.github.io/docker-for-riscv64 trixie main"
     state: present
     filename: docker-riscv64
     update_cache: yes
@@ -16,12 +24,10 @@
     name:
       - docker.io
       - docker-cli
-      - docker-compose-plugin
+      - docker-compose
       - docker-buildx-plugin
       - containerd
       - runc
-      - tini
-      - tini-static
       - cagent
     state: present
     update_cache: yes
