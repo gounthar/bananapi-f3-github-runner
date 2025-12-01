@@ -64,7 +64,7 @@
   when: github_pat != '' and not runner_config.stat.exists
   no_log: true
   register: configure_result
-  ignore_errors: yes
+  failed_when: configure_result.rc != 0 and 'already configured' not in configure_result.stderr
 
 - name: Display configuration result (without secrets)
   debug:
