@@ -11,21 +11,19 @@ set -e
 RUNNER_DIR="{{ runner_workdir }}"
 SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
-LOCK_DIR="/tmp/github-runner-update.lock"
+LOCK_FILE="${RUNNER_DIR}/.update.lock"
 
 # Logging function (writes only to file, cron handles stdout redirection)
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Create lock directory atomically (mkdir is atomic)
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    log "ERROR: Another update is already running (lock directory exists)"
+# Acquire lock using flock (more robust than mkdir for long-running processes)
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    log "ERROR: Another update is already running (lock file exists)"
     exit 1
 fi
-
-# Remove lock on exit
-trap 'rmdir "$LOCK_DIR"' EXIT
 
 log "Starting github-act-runner update check..."
 
