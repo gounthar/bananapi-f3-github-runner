@@ -112,10 +112,15 @@
   file:
     path: /var/log/github-runner-update.log
     state: touch
+  changed_when: false
+
+- name: Ensure correct ownership and permissions of runner update log file
+  file:
+    path: /var/log/github-runner-update.log
+    state: file
     owner: "{{ runner_user }}"
     group: "{{ runner_user }}"
     mode: '0644'
-  changed_when: false
 
 - name: Allow runner user to restart github-runner service without password
   copy:
