@@ -24,25 +24,46 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
+# Escape special JSON characters in a string
+json_escape() {
+    local str="$1"
+    # Escape backslashes, quotes, and control characters for JSON
+    str="${str//\\/\\\\}"
+    str="${str//\"/\\\"}"
+    str="${str//$'\n'/\\n}"
+    str="${str//$'\r'/\\r}"
+    str="${str//$'\t'/\\t}"
+    printf '%s' "$str"
+}
+
 # Send webhook notification
 send_webhook() {
     local message="$1"
     if [ -n "$NOTIFY_WEBHOOK_URL" ]; then
         log "Sending webhook notification..."
+        
+        # Escape values for JSON
+        local escaped_message
+        local escaped_hostname
+        local timestamp
+        escaped_message=$(json_escape "$message")
+        escaped_hostname=$(json_escape "$HOSTNAME")
+        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+        
         # JSON payload compatible with Slack, Discord, and generic webhooks
         local payload
         payload=$(cat <<EOF
 {
-    "text": "GitHub Runner Update Failed on ${HOSTNAME}",
-    "content": "GitHub Runner Update Failed on ${HOSTNAME}",
-    "embeds": [{"description": "${message}"}],
+    "text": "GitHub Runner Update Failed on ${escaped_hostname}",
+    "content": "GitHub Runner Update Failed on ${escaped_hostname}",
+    "embeds": [{"description": "${escaped_message}"}],
     "attachments": [{
         "color": "danger",
         "title": "GitHub Runner Update Failure",
-        "text": "${message}",
+        "text": "${escaped_message}",
         "fields": [
-            {"title": "Host", "value": "${HOSTNAME}", "short": true},
-            {"title": "Time", "value": "$(date '+%Y-%m-%d %H:%M:%S')", "short": true}
+            {"title": "Host", "value": "${escaped_hostname}", "short": true},
+            {"title": "Time", "value": "${timestamp}", "short": true}
         ]
     }]
 }
@@ -60,12 +81,20 @@ EOF
 send_email() {
     local message="$1"
     if [ -n "$NOTIFY_EMAIL" ]; then
+        # Validate email format (basic check for @ symbol and no dangerous characters)
+        if ! echo "$NOTIFY_EMAIL" | grep -qE '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+            log "WARNING: Invalid email address format. Skipping email notification."
+            return 1
+        fi
+        
         log "Sending email notification to ${NOTIFY_EMAIL}..."
         local subject="GitHub Runner Update Failed on ${HOSTNAME}"
+        local timestamp
+        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
         local body="GitHub Runner Update Failure Report
 
 Host: ${HOSTNAME}
-Time: $(date '+%Y-%m-%d %H:%M:%S')
+Time: ${timestamp}
 
 Error Details:
 ${message}
@@ -73,7 +102,7 @@ ${message}
 Please check the log file at ${LOG_FILE} for more details."
 
         if command -v mail >/dev/null 2>&1; then
-            echo "$body" | mail -s "$subject" "$NOTIFY_EMAIL" 2>/dev/null && \
+            echo "$body" | mail -s "$subject" -- "$NOTIFY_EMAIL" 2>/dev/null && \
                 log "Email notification sent successfully" || \
                 log "WARNING: Failed to send email notification"
         elif command -v sendmail >/dev/null 2>&1; then
@@ -191,6 +220,8 @@ if systemctl is-active --quiet github-runner; then
     log "Updated from $CURRENT_COMMIT to $NEW_COMMIT"
 else
     log "ERROR: Service failed to start after update!"
-    notify_failure "Service failed to start after update (systemctl status: $(systemctl status github-runner --no-pager 2>&1 | head -5))"
+    # Capture service status before passing to notification function
+    service_status=$(systemctl status github-runner --no-pager 2>&1 | head -5)
+    notify_failure "Service failed to start after update. Status: ${service_status}"
     exit 1
 fi
