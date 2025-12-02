@@ -63,9 +63,6 @@ Examining the board reveals the following ports and connectors:
 - 2x WiFi antenna connectors (U.FL)
 - M.2 slot (for NVMe/WiFi)
 
-![Banana Pi F3 Board - Bottom View](../../media/IMG_20251130_201539.jpg)
-*Bottom view showing the 16GB RAM chips, eMMC storage, and component layout*
-
 ![Banana Pi F3 Board - Top View](../../media/IMG_20251130_201546.jpg)
 *Top view showing ports, GPIO header, and antenna connectors*
 
@@ -161,7 +158,6 @@ All photos from this unboxing are stored in `/media/`:
 - `IMG_20251130_201247.jpg` - Box packaging
 - `IMG_20251130_201249.jpg` - Unboxed contents overview
 - `IMG_20251130_201251.jpg` - Components detail
-- `IMG_20251130_201539.jpg` - Board bottom view
 - `IMG_20251130_201546.jpg` - Board top view
 - `IMG_20251130_213801.jpg` - Assembled in case with fan
 
