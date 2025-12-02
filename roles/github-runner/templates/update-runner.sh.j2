@@ -18,9 +18,12 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Acquire lock using flock (more robust than mkdir for long-running processes)
-exec 200>"$LOCK_FILE"
-if ! flock -n 200; then
+# Acquire exclusive lock using flock (more robust than mkdir for long-running processes).
+# This approach uses a file descriptor to hold the lock - the lock is automatically
+# released when the script exits (normal, error, or signal), eliminating stale locks.
+LOCK_FD=200
+eval "exec ${LOCK_FD}>\"$LOCK_FILE\""
+if ! flock -n "$LOCK_FD"; then
     log "ERROR: Another update is already running (lock file exists)"
     exit 1
 fi
