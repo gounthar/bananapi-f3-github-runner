@@ -61,8 +61,14 @@ fi
 log "New version available. Updating..."
 
 # Pull latest changes (using checkout + reset for clean state)
-git checkout {{ runner_version | default('main') }}
-git reset --hard origin/{{ runner_version | default('main') }}
+if ! git checkout {{ runner_version | default('main') }}; then
+    log "ERROR: Failed to checkout branch {{ runner_version | default('main') }}"
+    exit 1
+fi
+if ! git reset --hard origin/{{ runner_version | default('main') }}; then
+    log "ERROR: Failed to reset to origin/{{ runner_version | default('main') }}"
+    exit 1
+fi
 
 # Build new binary with explicit error handling
 log "Building new github-act-runner binary..."
