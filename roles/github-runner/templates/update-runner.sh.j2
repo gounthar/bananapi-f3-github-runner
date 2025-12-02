@@ -48,9 +48,14 @@ send_webhook() {
         local timestamp
         escaped_message=$(json_escape "$message")
         escaped_hostname=$(json_escape "$HOSTNAME")
+        # Timestamp format is JSON-safe (only digits, hyphens, colons, and spaces)
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
         
-        # JSON payload compatible with Slack, Discord, and generic webhooks
+        # JSON payload designed to be compatible with multiple webhook services:
+        # - "text": Used by Slack and generic webhooks
+        # - "content"/"embeds": Used by Discord
+        # - "attachments": Used by Slack for rich formatting
+        # Services will ignore fields they don't recognize
         local payload
         payload=$(cat <<EOF
 {
