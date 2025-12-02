@@ -316,6 +316,39 @@ go build -o github-act-runner
 sudo systemctl restart github-runner
 ```
 
+### Automatic Updates
+
+When `runner_auto_update` is enabled (default: `true`), the runner will automatically check for updates weekly via a cron job. The update process:
+- Runs every Sunday at 3:00 AM
+- Checks for new commits in the source repository
+- Rebuilds and restarts the runner if updates are available
+- Logs all activity to `/var/log/github-runner-update.log`
+
+#### Failure Notifications
+
+To receive notifications when automatic updates fail, configure the following environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RUNNER_NOTIFY_ON_FAILURE` | Enable failure notifications | `false` |
+| `RUNNER_NOTIFY_WEBHOOK_URL` | Webhook URL (Slack, Discord, or generic) | `""` |
+| `RUNNER_NOTIFY_EMAIL` | Email address for notifications | `""` |
+
+**Example configuration in `.env`:**
+
+```bash
+# Enable notifications for auto-update failures
+RUNNER_NOTIFY_ON_FAILURE=true
+
+# Webhook notification (Slack, Discord, or generic webhook)
+RUNNER_NOTIFY_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# Email notification (requires mail/sendmail on the system)
+RUNNER_NOTIFY_EMAIL=admin@example.com
+```
+
+**Note**: Email notifications require `mail` or `sendmail` to be installed and configured on the system.
+
 ### Checking Status
 
 ```bash

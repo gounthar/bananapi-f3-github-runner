@@ -29,3 +29,8 @@ all:
     auto_cleanup: "{{ lookup('env', 'AUTO_CLEANUP') | default('true', true) }}"
     cleanup_threshold: "{{ lookup('env', 'CLEANUP_THRESHOLD') | default('80', true) }}"
     runner_auto_update: "{{ lookup('env', 'RUNNER_AUTO_UPDATE') | default('true', true) | bool }}"
+
+    # Notification Configuration (for auto-update cron job failures)
+    runner_notify_on_failure: "{{ lookup('env', 'RUNNER_NOTIFY_ON_FAILURE') | default('false', true) | bool }}"
+    runner_notify_webhook_url: "{{ lookup('env', 'RUNNER_NOTIFY_WEBHOOK_URL') | default('', true) }}"
+    runner_notify_email: "{{ lookup('env', 'RUNNER_NOTIFY_EMAIL') | default('', true) }}"

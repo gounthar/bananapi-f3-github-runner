@@ -12,15 +12,98 @@ RUNNER_DIR="{{ runner_workdir }}"
 SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
 LOCK_DIR="/tmp/github-runner-update.lock"
+HOSTNAME=$(hostname)
+
+# Notification configuration
+NOTIFY_ON_FAILURE="{{ runner_notify_on_failure | default(false) | lower }}"
+NOTIFY_WEBHOOK_URL="{{ runner_notify_webhook_url | default('') }}"
+NOTIFY_EMAIL="{{ runner_notify_email | default('') }}"
 
 # Logging function (writes only to file, cron handles stdout redirection)
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
+# Send webhook notification
+send_webhook() {
+    local message="$1"
+    if [ -n "$NOTIFY_WEBHOOK_URL" ]; then
+        log "Sending webhook notification..."
+        # JSON payload compatible with Slack, Discord, and generic webhooks
+        local payload
+        payload=$(cat <<EOF
+{
+    "text": "GitHub Runner Update Failed on ${HOSTNAME}",
+    "content": "GitHub Runner Update Failed on ${HOSTNAME}",
+    "embeds": [{"description": "${message}"}],
+    "attachments": [{
+        "color": "danger",
+        "title": "GitHub Runner Update Failure",
+        "text": "${message}",
+        "fields": [
+            {"title": "Host", "value": "${HOSTNAME}", "short": true},
+            {"title": "Time", "value": "$(date '+%Y-%m-%d %H:%M:%S')", "short": true}
+        ]
+    }]
+}
+EOF
+)
+        if curl -s -X POST -H "Content-Type: application/json" -d "$payload" "$NOTIFY_WEBHOOK_URL" >/dev/null 2>&1; then
+            log "Webhook notification sent successfully"
+        else
+            log "WARNING: Failed to send webhook notification"
+        fi
+    fi
+}
+
+# Send email notification
+send_email() {
+    local message="$1"
+    if [ -n "$NOTIFY_EMAIL" ]; then
+        log "Sending email notification to ${NOTIFY_EMAIL}..."
+        local subject="GitHub Runner Update Failed on ${HOSTNAME}"
+        local body="GitHub Runner Update Failure Report
+
+Host: ${HOSTNAME}
+Time: $(date '+%Y-%m-%d %H:%M:%S')
+
+Error Details:
+${message}
+
+Please check the log file at ${LOG_FILE} for more details."
+
+        if command -v mail >/dev/null 2>&1; then
+            echo "$body" | mail -s "$subject" "$NOTIFY_EMAIL" 2>/dev/null && \
+                log "Email notification sent successfully" || \
+                log "WARNING: Failed to send email notification"
+        elif command -v sendmail >/dev/null 2>&1; then
+            {
+                echo "To: ${NOTIFY_EMAIL}"
+                echo "Subject: ${subject}"
+                echo ""
+                echo "$body"
+            } | sendmail -t 2>/dev/null && \
+                log "Email notification sent successfully" || \
+                log "WARNING: Failed to send email notification"
+        else
+            log "WARNING: No mail command available (mail or sendmail). Cannot send email notification."
+        fi
+    fi
+}
+
+# Send failure notification via configured channels
+notify_failure() {
+    local message="$1"
+    if [ "$NOTIFY_ON_FAILURE" = "true" ]; then
+        send_webhook "$message"
+        send_email "$message"
+    fi
+}
+
 # Create lock directory atomically (mkdir is atomic)
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     log "ERROR: Another update is already running (lock directory exists)"
+    notify_failure "Another update is already running (lock directory exists)"
     exit 1
 fi
 
@@ -32,10 +115,11 @@ log "Starting github-act-runner update check..."
 # Verify source directory exists
 if [ ! -d "$SRC_DIR" ]; then
     log "ERROR: Source directory $SRC_DIR does not exist"
+    notify_failure "Source directory $SRC_DIR does not exist"
     exit 1
 fi
 
-cd "$SRC_DIR" || { log "ERROR: Cannot access source directory $SRC_DIR"; exit 1; }
+cd "$SRC_DIR" || { log "ERROR: Cannot access source directory $SRC_DIR"; notify_failure "Cannot access source directory $SRC_DIR"; exit 1; }
 
 # Get current commit
 CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
@@ -45,6 +129,7 @@ log "Current commit: $CURRENT_COMMIT"
 log "Fetching latest changes from origin..."
 if ! git fetch origin {{ runner_version | default('main') }}; then
     log "ERROR: Failed to fetch from origin"
+    notify_failure "Failed to fetch from origin (git fetch failed)"
     exit 1
 fi
 
@@ -68,12 +153,14 @@ git reset --hard origin/{{ runner_version | default('main') }}
 log "Building new github-act-runner binary..."
 if ! go build -o github-act-runner; then
     log "ERROR: Build failed"
+    notify_failure "Build failed (go build command failed)"
     exit 1
 fi
 
 # Verify binary exists and is executable
 if [ ! -x github-act-runner ]; then
     log "ERROR: Built binary github-act-runner not found or not executable"
+    notify_failure "Built binary github-act-runner not found or not executable"
     exit 1
 fi
 
@@ -104,5 +191,6 @@ if systemctl is-active --quiet github-runner; then
     log "Updated from $CURRENT_COMMIT to $NEW_COMMIT"
 else
     log "ERROR: Service failed to start after update!"
+    notify_failure "Service failed to start after update (systemctl status: $(systemctl status github-runner --no-pager 2>&1 | head -5))"
     exit 1
 fi
