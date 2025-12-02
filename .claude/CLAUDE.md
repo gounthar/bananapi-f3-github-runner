@@ -136,23 +136,31 @@ To disable automatic updates, set in `.env`:
 RUNNER_AUTO_UPDATE=false
 ```
 
-Then re-run the playbook.
+Then re-run the playbook to remove the cron job:
+```bash
+ansible-playbook -i inventory.yml playbooks/setup-runner.yml
+```
 
 ### Manual Updates
 
 To manually update the github-act-runner binary:
 
 ```bash
-cd /home/poddingue/github-act-runner-test/src
+# Replace <RUNNER_WORKDIR> with your configured path (default: /home/poddingue/github-act-runner-test)
+cd <RUNNER_WORKDIR>/src
 git pull
 go build -o github-act-runner
 cp github-act-runner ../
 sudo systemctl restart github-runner
 ```
 
-Or run the update script directly:
+Or run the update script directly (path depends on `runner_workdir` variable in Ansible):
 ```bash
+# Default path:
 /home/poddingue/github-act-runner-test/update-runner.sh
+
+# Or with custom runner_workdir:
+<RUNNER_WORKDIR>/update-runner.sh
 ```
 
 Or re-run the Ansible playbook (will rebuild if binary doesn't exist).

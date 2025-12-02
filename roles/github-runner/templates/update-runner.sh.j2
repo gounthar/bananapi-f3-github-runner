@@ -11,26 +11,31 @@ set -e
 RUNNER_DIR="{{ runner_workdir }}"
 SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
-LOCK_FILE="/tmp/github-runner-update.lock"
+LOCK_DIR="/tmp/github-runner-update.lock"
 
-# Logging function
+# Logging function (writes only to file, cron handles stdout redirection)
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Check if another update is running
-if [ -f "$LOCK_FILE" ]; then
-    log "ERROR: Another update is already running (lock file exists)"
+# Create lock directory atomically (mkdir is atomic)
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    log "ERROR: Another update is already running (lock directory exists)"
     exit 1
 fi
 
-# Create lock file
-trap "rm -f $LOCK_FILE" EXIT
-touch "$LOCK_FILE"
+# Remove lock on exit
+trap 'rmdir "$LOCK_DIR"' EXIT
 
 log "Starting github-act-runner update check..."
 
-cd "$SRC_DIR"
+# Verify source directory exists
+if [ ! -d "$SRC_DIR" ]; then
+    log "ERROR: Source directory $SRC_DIR does not exist"
+    exit 1
+fi
+
+cd "$SRC_DIR" || { log "ERROR: Cannot access source directory $SRC_DIR"; exit 1; }
 
 # Get current commit
 CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
@@ -38,7 +43,10 @@ log "Current commit: $CURRENT_COMMIT"
 
 # Fetch latest changes
 log "Fetching latest changes from origin..."
-git fetch origin {{ runner_version | default('main') }}
+if ! git fetch origin {{ runner_version | default('main') }}; then
+    log "ERROR: Failed to fetch from origin"
+    exit 1
+fi
 
 # Get remote commit
 REMOTE_COMMIT=$(git rev-parse origin/{{ runner_version | default('main') }} 2>/dev/null || echo "unknown")
@@ -52,23 +60,44 @@ fi
 
 log "New version available. Updating..."
 
-# Pull latest changes
-git pull origin {{ runner_version | default('main') }}
+# Pull latest changes (using checkout + reset for clean state)
+git checkout {{ runner_version | default('main') }}
+git reset --hard origin/{{ runner_version | default('main') }}
 
-# Build new binary
+# Build new binary with explicit error handling
 log "Building new github-act-runner binary..."
-go build -o github-act-runner
+if ! go build -o github-act-runner; then
+    log "ERROR: Build failed"
+    exit 1
+fi
 
-# Copy to working directory
+# Verify binary exists and is executable
+if [ ! -x github-act-runner ]; then
+    log "ERROR: Built binary github-act-runner not found or not executable"
+    exit 1
+fi
+
+# Backup old binary before overwriting
 log "Installing new binary..."
+if [ -f "${RUNNER_DIR}/github-act-runner" ]; then
+    cp "${RUNNER_DIR}/github-act-runner" "${RUNNER_DIR}/github-act-runner.backup"
+fi
 cp github-act-runner "${RUNNER_DIR}/"
 
 # Restart the service
 log "Restarting github-runner service..."
 sudo systemctl restart github-runner
 
-# Verify service is running
-sleep 5
+# Wait for service to become active with polling (max 60 seconds)
+MAX_WAIT_TIME=60
+WAIT_INTERVAL=5
+ELAPSED_TIME=0
+while ! systemctl is-active --quiet github-runner && [ "$ELAPSED_TIME" -lt "$MAX_WAIT_TIME" ]; do
+    log "Service not yet active, waiting..."
+    sleep "$WAIT_INTERVAL"
+    ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+done
+
 if systemctl is-active --quiet github-runner; then
     log "Update complete. Service is running."
     NEW_COMMIT=$(git rev-parse HEAD)
