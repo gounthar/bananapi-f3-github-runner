@@ -133,8 +133,17 @@ fi
 log "New version available. Updating..."
 
 # Pull latest changes (using checkout + reset for clean state)
-git checkout "$RUNNER_VERSION"
-git reset --hard "origin/$RUNNER_VERSION"
+if ! git checkout "$RUNNER_VERSION"; then
+    log "ERROR: Failed to checkout branch $RUNNER_VERSION"
+    send_notification "error" "Failed to checkout branch $RUNNER_VERSION"
+    exit 1
+fi
+
+if ! git reset --hard "origin/$RUNNER_VERSION"; then
+    log "ERROR: Failed to reset to origin/$RUNNER_VERSION"
+    send_notification "error" "Failed to reset to origin/$RUNNER_VERSION"
+    exit 1
+fi
 
 # Build new binary with configurable flags
 log "Building new github-act-runner binary..."
