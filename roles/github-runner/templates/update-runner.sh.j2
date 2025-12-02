@@ -12,6 +12,14 @@ RUNNER_DIR="{{ runner_workdir }}"
 SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
 LOCK_DIR="/tmp/github-runner-update.lock"
+RUNNER_VERSION="{{ runner_version | default('main') }}"
+
+# Validate runner version to prevent command injection (defense-in-depth)
+# Only allow alphanumeric characters, dots, underscores, hyphens, and forward slashes
+if ! echo "$RUNNER_VERSION" | grep -qE '^[A-Za-z0-9._/-]+$'; then
+    echo "ERROR: Invalid runner version '$RUNNER_VERSION'. Only alphanumeric characters, dots, underscores, hyphens, and forward slashes are allowed." >&2
+    exit 1
+fi
 
 # Logging function (writes only to file, cron handles stdout redirection)
 log() {
@@ -43,13 +51,13 @@ log "Current commit: $CURRENT_COMMIT"
 
 # Fetch latest changes
 log "Fetching latest changes from origin..."
-if ! git fetch origin {{ runner_version | default('main') }}; then
+if ! git fetch origin "$RUNNER_VERSION"; then
     log "ERROR: Failed to fetch from origin"
     exit 1
 fi
 
 # Get remote commit
-REMOTE_COMMIT=$(git rev-parse origin/{{ runner_version | default('main') }} 2>/dev/null || echo "unknown")
+REMOTE_COMMIT=$(git rev-parse "origin/$RUNNER_VERSION" 2>/dev/null || echo "unknown")
 log "Remote commit: $REMOTE_COMMIT"
 
 # Check if update is needed
@@ -61,8 +69,8 @@ fi
 log "New version available. Updating..."
 
 # Pull latest changes (using checkout + reset for clean state)
-git checkout {{ runner_version | default('main') }}
-git reset --hard origin/{{ runner_version | default('main') }}
+git checkout "$RUNNER_VERSION"
+git reset --hard "origin/$RUNNER_VERSION"
 
 # Build new binary with explicit error handling
 log "Building new github-act-runner binary..."
