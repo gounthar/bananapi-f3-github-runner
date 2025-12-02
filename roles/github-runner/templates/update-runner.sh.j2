@@ -87,7 +87,8 @@ sudo systemctl restart github-runner
 
 # Wait up to 15 seconds for the service to become active
 SERVICE_STARTED=false
-for i in {1..15}; do
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt 15 ]; do
     if systemctl is-active --quiet github-runner; then
         SERVICE_STARTED=true
         log "Update complete. Service is running."
@@ -95,6 +96,7 @@ for i in {1..15}; do
         log "Updated from $CURRENT_COMMIT to $NEW_COMMIT"
         break
     fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
     sleep 1
 done
 

@@ -133,5 +133,5 @@
     weekday: "0"
     hour: "3"
     minute: "0"
-    job: "{{ runner_workdir }}/update-runner.sh 2>> /var/log/github-runner-update.log"
+    job: "{{ runner_workdir }}/update-runner.sh >> /var/log/github-runner-update.log 2>&1"
     state: "{{ 'present' if runner_auto_update | default(true) | bool else 'absent' }}"
