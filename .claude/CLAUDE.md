@@ -122,13 +122,45 @@ Service configuration:
 ### Automatic Updates (Recommended)
 
 The runner is configured with automatic weekly updates by default. A cron job runs every Sunday at 3 AM to:
-1. Check for new commits in the github-act-runner repository
-2. Pull and rebuild if updates are available
-3. Restart the service with the new binary
+1. Validate the `runner_version` format for security
+2. Check for new commits in the github-act-runner repository
+3. Pull and rebuild if updates are available (with configurable build flags)
+4. Backup the old binary before updating
+5. Restart the service with the new binary
+6. Roll back to backup if the new binary fails to start
+7. Send webhook notifications on success, warning, or error (if configured)
 
 View update logs:
 ```bash
 cat /var/log/github-runner-update.log
+```
+
+#### Configuration Options
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RUNNER_AUTO_UPDATE` | Enable/disable auto-updates | `true` |
+| `RUNNER_BUILD_FLAGS` | Custom `go build` flags (e.g., `-ldflags="-s -w"`) | (empty) |
+| `RUNNER_UPDATE_WEBHOOK` | Webhook URL for notifications | (empty) |
+
+Example `.env` configuration:
+```bash
+RUNNER_AUTO_UPDATE=true
+RUNNER_BUILD_FLAGS=-ldflags="-s -w"
+RUNNER_UPDATE_WEBHOOK=https://hooks.slack.com/services/...
+```
+
+#### Webhook Notification Format
+
+When `RUNNER_UPDATE_WEBHOOK` is set, the update script sends JSON POST requests:
+```json
+{
+    "status": "success|warning|error",
+    "runner": "bananapi-f3-runner",
+    "host": "bananapi-f3",
+    "message": "Updated from abc123 to def456",
+    "timestamp": "2025-12-02T09:00:00+00:00"
+}
 ```
 
 To disable automatic updates, set in `.env`:

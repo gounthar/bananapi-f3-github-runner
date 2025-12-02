@@ -11,45 +11,117 @@ set -e
 RUNNER_DIR="{{ runner_workdir }}"
 SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
-LOCK_DIR="/tmp/github-runner-update.lock"
+LOCK_FILE="/tmp/github-runner-update.lock"
+RUNNER_VERSION="{{ runner_version | default('main') }}"
+GO_BUILD_FLAGS="{{ runner_build_flags | default('') }}"
+WEBHOOK_URL="{{ runner_update_webhook | default('') }}"
 
 # Logging function (writes only to file, cron handles stdout redirection)
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Create lock directory atomically (mkdir is atomic)
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    log "ERROR: Another update is already running (lock directory exists)"
-    exit 1
-fi
+# Send webhook notification (for failures or updates)
+send_notification() {
+    local status="$1"
+    local message="$2"
 
-# Remove lock on exit
-trap 'rmdir "$LOCK_DIR"' EXIT
+    if [ -n "$WEBHOOK_URL" ]; then
+        local payload
+        payload=$(cat <<PAYLOAD
+{
+    "status": "${status}",
+    "runner": "{{ runner_name }}",
+    "host": "$(hostname)",
+    "message": "${message}",
+    "timestamp": "$(date -Iseconds)"
+}
+PAYLOAD
+)
+        # Send webhook (fire and forget, don't fail on notification errors)
+        curl -s -X POST -H "Content-Type: application/json" -d "$payload" "$WEBHOOK_URL" >/dev/null 2>&1 || true
+        log "Notification sent: $status - $message"
+    fi
+}
+
+# Validate runner_version format (branch name or tag)
+validate_runner_version() {
+    # Allow alphanumeric, hyphens, underscores, dots, and forward slashes (for refs like feature/foo)
+    if ! echo "$RUNNER_VERSION" | grep -qE '^[a-zA-Z0-9._/-]+$'; then
+        log "ERROR: Invalid runner_version format: $RUNNER_VERSION"
+        send_notification "error" "Invalid runner_version format: $RUNNER_VERSION"
+        exit 1
+    fi
+
+    # Prevent dangerous patterns
+    if echo "$RUNNER_VERSION" | grep -qE '(^\.|\.\.|/\.|/$)'; then
+        log "ERROR: runner_version contains potentially dangerous pattern: $RUNNER_VERSION"
+        send_notification "error" "Invalid runner_version: $RUNNER_VERSION"
+        exit 1
+    fi
+}
+
+# Use flock for robust file-based locking
+acquire_lock() {
+    exec 200>"$LOCK_FILE"
+    if ! flock -n 200; then
+        log "ERROR: Another update is already running (could not acquire lock)"
+        exit 1
+    fi
+    # Lock acquired, will be released when script exits
+}
+
+# Cleanup function
+cleanup() {
+    # flock is automatically released when fd 200 is closed (script exit)
+    rm -f "$LOCK_FILE" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+# Validate runner_version before proceeding
+validate_runner_version
+
+# Acquire lock using flock
+acquire_lock
 
 log "Starting github-act-runner update check..."
 
 # Verify source directory exists
 if [ ! -d "$SRC_DIR" ]; then
     log "ERROR: Source directory $SRC_DIR does not exist"
+    send_notification "error" "Source directory $SRC_DIR does not exist"
     exit 1
 fi
 
-cd "$SRC_DIR" || { log "ERROR: Cannot access source directory $SRC_DIR"; exit 1; }
+cd "$SRC_DIR" || {
+    log "ERROR: Cannot access source directory $SRC_DIR"
+    send_notification "error" "Cannot access source directory $SRC_DIR"
+    exit 1
+}
 
-# Get current commit
-CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+# Get current commit (fail fast if repo is broken)
+CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null) || {
+    log "ERROR: Unable to determine current commit (HEAD). Repository may be corrupted."
+    send_notification "error" "Unable to determine current commit (HEAD)"
+    exit 1
+}
 log "Current commit: $CURRENT_COMMIT"
 
 # Fetch latest changes
 log "Fetching latest changes from origin..."
-if ! git fetch origin {{ runner_version | default('main') }}; then
-    log "ERROR: Failed to fetch from origin"
+if ! git fetch origin "$RUNNER_VERSION"; then
+    log "ERROR: Failed to fetch from origin for version $RUNNER_VERSION"
+    send_notification "error" "Failed to fetch from origin for version $RUNNER_VERSION"
     exit 1
 fi
 
-# Get remote commit
-REMOTE_COMMIT=$(git rev-parse origin/{{ runner_version | default('main') }} 2>/dev/null || echo "unknown")
+# Get remote commit (fail fast if branch doesn't exist)
+REMOTE_COMMIT=$(git rev-parse "origin/$RUNNER_VERSION" 2>/dev/null) || {
+    log "ERROR: Unable to determine remote commit for origin/$RUNNER_VERSION. Branch may not exist."
+    send_notification "error" "Unable to determine remote commit for origin/$RUNNER_VERSION"
+    exit 1
+}
 log "Remote commit: $REMOTE_COMMIT"
 
 # Check if update is needed
@@ -61,19 +133,27 @@ fi
 log "New version available. Updating..."
 
 # Pull latest changes (using checkout + reset for clean state)
-git checkout {{ runner_version | default('main') }}
-git reset --hard origin/{{ runner_version | default('main') }}
+git checkout "$RUNNER_VERSION"
+git reset --hard "origin/$RUNNER_VERSION"
 
-# Build new binary with explicit error handling
+# Build new binary with configurable flags
 log "Building new github-act-runner binary..."
-if ! go build -o github-act-runner; then
+BUILD_CMD="go build"
+if [ -n "$GO_BUILD_FLAGS" ]; then
+    BUILD_CMD="go build $GO_BUILD_FLAGS"
+    log "Using build flags: $GO_BUILD_FLAGS"
+fi
+
+if ! $BUILD_CMD -o github-act-runner; then
     log "ERROR: Build failed"
+    send_notification "error" "Build failed for commit $(git rev-parse HEAD)"
     exit 1
 fi
 
 # Verify binary exists and is executable
 if [ ! -x github-act-runner ]; then
     log "ERROR: Built binary github-act-runner not found or not executable"
+    send_notification "error" "Built binary not found or not executable"
     exit 1
 fi
 
@@ -86,7 +166,7 @@ cp github-act-runner "${RUNNER_DIR}/"
 
 # Restart the service
 log "Restarting github-runner service..."
-sudo systemctl restart github-runner
+sudo /usr/bin/systemctl restart github-runner
 
 # Wait for service to become active with polling (max 60 seconds)
 MAX_WAIT_TIME=60
@@ -99,10 +179,26 @@ while ! systemctl is-active --quiet github-runner && [ "$ELAPSED_TIME" -lt "$MAX
 done
 
 if systemctl is-active --quiet github-runner; then
-    log "Update complete. Service is running."
     NEW_COMMIT=$(git rev-parse HEAD)
+    log "Update complete. Service is running."
     log "Updated from $CURRENT_COMMIT to $NEW_COMMIT"
+    send_notification "success" "Updated from ${CURRENT_COMMIT:0:8} to ${NEW_COMMIT:0:8}"
 else
     log "ERROR: Service failed to start after update!"
+    # Attempt to restore backup
+    if [ -f "${RUNNER_DIR}/github-act-runner.backup" ]; then
+        log "Attempting to restore backup binary..."
+        cp "${RUNNER_DIR}/github-act-runner.backup" "${RUNNER_DIR}/github-act-runner"
+        sudo /usr/bin/systemctl restart github-runner
+        sleep 5
+        if systemctl is-active --quiet github-runner; then
+            log "Backup restored successfully, service is running"
+            send_notification "warning" "Update failed, rolled back to previous version"
+        else
+            send_notification "error" "Service failed to start after update and rollback failed"
+        fi
+    else
+        send_notification "error" "Service failed to start after update, no backup available"
+    fi
     exit 1
 fi
