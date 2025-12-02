@@ -9,7 +9,6 @@
 set -e
 
 RUNNER_DIR="{{ runner_workdir }}"
-SRC_DIR="${RUNNER_DIR}/src"
 LOG_FILE="/var/log/github-runner-update.log"
 LOCK_FILE="/tmp/github-runner-update.lock"
 RUNNER_VERSION="{{ runner_version | default('main') }}"
@@ -87,16 +86,16 @@ acquire_lock
 
 log "Starting github-act-runner update check..."
 
-# Verify source directory exists
-if [ ! -d "$SRC_DIR" ]; then
-    log "ERROR: Source directory $SRC_DIR does not exist"
-    send_notification "error" "Source directory $SRC_DIR does not exist"
+# Verify runner directory exists and is a git repository
+if [ ! -d "$RUNNER_DIR/.git" ]; then
+    log "ERROR: Runner directory $RUNNER_DIR is not a git repository"
+    send_notification "error" "Runner directory $RUNNER_DIR is not a git repository"
     exit 1
 fi
 
-cd "$SRC_DIR" || {
-    log "ERROR: Cannot access source directory $SRC_DIR"
-    send_notification "error" "Cannot access source directory $SRC_DIR"
+cd "$RUNNER_DIR" || {
+    log "ERROR: Cannot access runner directory $RUNNER_DIR"
+    send_notification "error" "Cannot access runner directory $RUNNER_DIR"
     exit 1
 }
 
@@ -132,6 +131,12 @@ fi
 
 log "New version available. Updating..."
 
+# Backup current binary before making any changes
+if [ -f "github-act-runner" ]; then
+    log "Backing up current binary..."
+    cp github-act-runner github-act-runner.backup
+fi
+
 # Pull latest changes (using checkout + reset for clean state)
 if ! git checkout "$RUNNER_VERSION"; then
     log "ERROR: Failed to checkout branch $RUNNER_VERSION"
@@ -166,13 +171,6 @@ if [ ! -x github-act-runner ]; then
     exit 1
 fi
 
-# Backup old binary before overwriting
-log "Installing new binary..."
-if [ -f "${RUNNER_DIR}/github-act-runner" ]; then
-    cp "${RUNNER_DIR}/github-act-runner" "${RUNNER_DIR}/github-act-runner.backup"
-fi
-cp github-act-runner "${RUNNER_DIR}/"
-
 # Restart the service
 log "Restarting github-runner service..."
 sudo /usr/bin/systemctl restart github-runner
@@ -195,9 +193,9 @@ if systemctl is-active --quiet github-runner; then
 else
     log "ERROR: Service failed to start after update!"
     # Attempt to restore backup
-    if [ -f "${RUNNER_DIR}/github-act-runner.backup" ]; then
+    if [ -f "github-act-runner.backup" ]; then
         log "Attempting to restore backup binary..."
-        cp "${RUNNER_DIR}/github-act-runner.backup" "${RUNNER_DIR}/github-act-runner"
+        cp github-act-runner.backup github-act-runner
         sudo /usr/bin/systemctl restart github-runner
         sleep 5
         if systemctl is-active --quiet github-runner; then
