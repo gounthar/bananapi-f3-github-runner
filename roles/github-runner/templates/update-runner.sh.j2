@@ -1,0 +1,79 @@
+#!/bin/bash
+#
+# Weekly update script for github-act-runner
+# This script pulls the latest code, rebuilds the binary, and restarts the service
+#
+# Deployed by Ansible - do not edit manually
+#
+
+set -e
+
+RUNNER_DIR="{{ runner_workdir }}"
+SRC_DIR="${RUNNER_DIR}/src"
+LOG_FILE="/var/log/github-runner-update.log"
+LOCK_FILE="/tmp/github-runner-update.lock"
+
+# Logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+# Check if another update is running
+if [ -f "$LOCK_FILE" ]; then
+    log "ERROR: Another update is already running (lock file exists)"
+    exit 1
+fi
+
+# Create lock file
+trap "rm -f $LOCK_FILE" EXIT
+touch "$LOCK_FILE"
+
+log "Starting github-act-runner update check..."
+
+cd "$SRC_DIR"
+
+# Get current commit
+CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+log "Current commit: $CURRENT_COMMIT"
+
+# Fetch latest changes
+log "Fetching latest changes from origin..."
+git fetch origin {{ runner_version | default('main') }}
+
+# Get remote commit
+REMOTE_COMMIT=$(git rev-parse origin/{{ runner_version | default('main') }} 2>/dev/null || echo "unknown")
+log "Remote commit: $REMOTE_COMMIT"
+
+# Check if update is needed
+if [ "$CURRENT_COMMIT" = "$REMOTE_COMMIT" ]; then
+    log "Already up to date. No rebuild needed."
+    exit 0
+fi
+
+log "New version available. Updating..."
+
+# Pull latest changes
+git pull origin {{ runner_version | default('main') }}
+
+# Build new binary
+log "Building new github-act-runner binary..."
+go build -o github-act-runner
+
+# Copy to working directory
+log "Installing new binary..."
+cp github-act-runner "${RUNNER_DIR}/"
+
+# Restart the service
+log "Restarting github-runner service..."
+sudo systemctl restart github-runner
+
+# Verify service is running
+sleep 5
+if systemctl is-active --quiet github-runner; then
+    log "Update complete. Service is running."
+    NEW_COMMIT=$(git rev-parse HEAD)
+    log "Updated from $CURRENT_COMMIT to $NEW_COMMIT"
+else
+    log "ERROR: Service failed to start after update!"
+    exit 1
+fi

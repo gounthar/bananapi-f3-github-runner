@@ -28,3 +28,4 @@ all:
     enable_metrics: "{{ lookup('env', 'ENABLE_METRICS') | default('false', true) }}"
     auto_cleanup: "{{ lookup('env', 'AUTO_CLEANUP') | default('true', true) }}"
     cleanup_threshold: "{{ lookup('env', 'CLEANUP_THRESHOLD') | default('80', true) }}"
+    runner_auto_update: "{{ lookup('env', 'RUNNER_AUTO_UPDATE') | default('true', true) }}"

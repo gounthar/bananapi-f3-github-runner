@@ -98,3 +98,40 @@
 - name: Display runner status
   debug:
     msg: "GitHub Runner service is {{ runner_status.status.ActiveState }}"
+
+# Weekly auto-update for github-act-runner
+- name: Deploy runner update script
+  template:
+    src: update-runner.sh.j2
+    dest: "{{ runner_workdir }}/update-runner.sh"
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: '0755'
+
+- name: Create log file for runner updates
+  file:
+    path: /var/log/github-runner-update.log
+    state: touch
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: '0644'
+  changed_when: false
+
+- name: Allow runner user to restart github-runner service without password
+  copy:
+    content: |
+      # Allow {{ runner_user }} to restart the github-runner service for auto-updates
+      {{ runner_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart github-runner
+    dest: /etc/sudoers.d/github-runner-update
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Setup weekly cron job for runner updates
+  cron:
+    name: "Weekly github-act-runner update"
+    user: "{{ runner_user }}"
+    weekday: "0"
+    hour: "3"
+    minute: "0"
+    job: "{{ runner_workdir }}/update-runner.sh >> /var/log/github-runner-update.log 2>&1"
+    state: "{{ 'present' if runner_auto_update | default(true) else 'absent' }}"

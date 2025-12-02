@@ -119,7 +119,28 @@ Service configuration:
 
 ## Updating the Runner
 
-To update the github-act-runner binary:
+### Automatic Updates (Recommended)
+
+The runner is configured with automatic weekly updates by default. A cron job runs every Sunday at 3 AM to:
+1. Check for new commits in the github-act-runner repository
+2. Pull and rebuild if updates are available
+3. Restart the service with the new binary
+
+View update logs:
+```bash
+cat /var/log/github-runner-update.log
+```
+
+To disable automatic updates, set in `.env`:
+```bash
+RUNNER_AUTO_UPDATE=false
+```
+
+Then re-run the playbook.
+
+### Manual Updates
+
+To manually update the github-act-runner binary:
 
 ```bash
 cd /home/poddingue/github-act-runner-test/src
@@ -129,12 +150,18 @@ cp github-act-runner ../
 sudo systemctl restart github-runner
 ```
 
+Or run the update script directly:
+```bash
+/home/poddingue/github-act-runner-test/update-runner.sh
+```
+
 Or re-run the Ansible playbook (will rebuild if binary doesn't exist).
 
 ## Template Files
 
 Jinja2 templates in `templates/` and `roles/*/templates/`:
 - `github-runner.service.j2`: Systemd service unit file
+- `update-runner.sh.j2`: Weekly auto-update script for github-act-runner
 - `daemon.json.j2`: Docker daemon configuration
 - `settings.json.j2`: Runner settings (if used)
 
