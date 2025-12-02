@@ -53,3 +53,13 @@ temp/
 _work/
 runner.log
 build.log
+
+# Claude Code local files (not for repo)
+.claude/
+CLAUDE.md
+CONTEXT.md
+.last_article_timestamp
+.bridge-config
+
+# Session journal (local documentation)
+journal/
