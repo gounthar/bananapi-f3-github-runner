@@ -7,6 +7,7 @@ Wants=docker.service
 Type=simple
 User={{ runner_user }}
 WorkingDirectory={{ runner_workdir }}
+Environment="PATH={{ runner_service_path | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
 ExecStart={{ runner_workdir }}/github-act-runner run
 Restart=always
 RestartSec=5

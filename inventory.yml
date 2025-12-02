@@ -20,6 +20,7 @@ all:
 
     # System Configuration
     go_version: "{{ lookup('env', 'GO_VERSION') | default('1.24.4', true) }}"
+    runner_service_path: "{{ lookup('env', 'RUNNER_SERVICE_PATH') | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin', true) }}"
     docker_log_max_size: "10m"
     docker_log_max_file: "3"
 
