@@ -15,7 +15,7 @@
 - name: Clone github-act-runner repository
   git:
     repo: 'https://github.com/ChristopherHX/github-act-runner.git'
-    dest: "{{ runner_workdir }}/src"
+    dest: "{{ runner_workdir }}"
     version: "{{ runner_version }}"
     force: yes
   become_user: "{{ runner_user }}"
@@ -24,20 +24,10 @@
 - name: Build github-act-runner
   command: go build -o github-act-runner
   args:
-    chdir: "{{ runner_workdir }}/src"
+    chdir: "{{ runner_workdir }}"
   become_user: "{{ runner_user }}"
   when: not runner_binary.stat.exists
   register: build_result
-
-- name: Copy binary to working directory
-  copy:
-    src: "{{ runner_workdir }}/src/github-act-runner"
-    dest: "{{ runner_workdir }}/github-act-runner"
-    remote_src: yes
-    owner: "{{ runner_user }}"
-    group: "{{ runner_user }}"
-    mode: '0755'
-  when: not runner_binary.stat.exists
 
 # Note: This project uses github-act-runner (ChristopherHX's fork) which is compatible with RISC-V64.
 # Unlike the official GitHub Actions runner which uses '.runner' as its configuration file,
