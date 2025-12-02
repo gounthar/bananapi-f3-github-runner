@@ -16,8 +16,9 @@ RUNNER_VERSION="{{ runner_version | default('main') }}"
 
 # Validate runner version to prevent command injection (defense-in-depth)
 # Only allow alphanumeric characters, dots, underscores, hyphens, and forward slashes
-if ! echo "$RUNNER_VERSION" | grep -qE '^[A-Za-z0-9._/-]+$'; then
-    echo "ERROR: Invalid runner version '$RUNNER_VERSION'. Only alphanumeric characters, dots, underscores, hyphens, and forward slashes are allowed." >&2
+# Also reject ".." sequences which are not valid in git refs
+if ! echo "$RUNNER_VERSION" | grep -qE '^[A-Za-z0-9._/-]+$' || echo "$RUNNER_VERSION" | grep -qE '\.\.'; then
+    echo "ERROR: Invalid runner version '$RUNNER_VERSION'. Only alphanumeric characters, dots, underscores, hyphens, and forward slashes are allowed (no '..' sequences)." >&2
     exit 1
 fi
 
