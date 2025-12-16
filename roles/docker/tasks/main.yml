@@ -1,20 +1,30 @@
 ---
-# Modern GPG key handling for Debian 12+ (apt-key is deprecated)
+# GPG key handling for Debian 12+ (apt-key is deprecated)
 - name: Create keyrings directory
   file:
-    path: /etc/apt/keyrings
+    path: /usr/share/keyrings
     state: directory
     mode: '0755'
 
 - name: Download RISC-V64 Docker APT repository GPG key
   get_url:
     url: https://github.com/gounthar/docker-for-riscv64/releases/download/gpg-key/gpg-public-key.asc
-    dest: /etc/apt/keyrings/docker-riscv64.asc
+    dest: /usr/share/keyrings/docker-riscv64-key.asc
+    mode: '0644'
+
+- name: Convert GPG key to binary format
+  shell: gpg --dearmor < /usr/share/keyrings/docker-riscv64-key.asc > /usr/share/keyrings/docker-riscv64.gpg
+  args:
+    creates: /usr/share/keyrings/docker-riscv64.gpg
+
+- name: Set permissions on GPG key
+  file:
+    path: /usr/share/keyrings/docker-riscv64.gpg
     mode: '0644'
 
 - name: Add RISC-V64 Docker APT repository
   apt_repository:
-    repo: "deb [arch=riscv64 signed-by=/etc/apt/keyrings/docker-riscv64.asc] https://gounthar.github.io/docker-for-riscv64 trixie main"
+    repo: "deb [arch=riscv64 signed-by=/usr/share/keyrings/docker-riscv64.gpg] https://gounthar.github.io/docker-for-riscv64 trixie main"
     state: present
     filename: docker-riscv64
     update_cache: yes
