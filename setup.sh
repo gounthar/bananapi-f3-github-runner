@@ -247,7 +247,7 @@ setup_ssh_key() {
         echo ""
         echo "To copy your public key to the Banana Pi F3, run:"
         echo ""
-        echo -e "${BLUE}  ssh-copy-id -i ${SSH_KEY_PATH}.pub ${SSH_USER}@${BANANAPI_IP}${NC}"
+        echo -e "${BLUE}  ssh-copy-id -o IdentitiesOnly=yes -i ${SSH_KEY_PATH}.pub ${SSH_USER}@${BANANAPI_IP}${NC}"
         echo ""
         read -p "Would you like to run ssh-copy-id now? [Y/n]: " copy_key
 
@@ -257,7 +257,7 @@ setup_ssh_key() {
             echo "(You may be prompted for the password on the Banana Pi F3)"
             echo ""
 
-            ssh-copy-id -i "${SSH_KEY_PATH}.pub" "${SSH_USER}@${BANANAPI_IP}"
+            ssh-copy-id -o IdentitiesOnly=yes -i "${SSH_KEY_PATH}.pub" "${SSH_USER}@${BANANAPI_IP}"
 
             if [ $? -eq 0 ]; then
                 echo ""
