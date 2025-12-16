@@ -402,7 +402,7 @@ run_ansible() {
     source "$ENV_FILE"
     set +a
 
-    ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-runner.yml
+    ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-runner.yml --ask-become-pass
 
     local exit_code=$?
 
