@@ -238,7 +238,7 @@ setup_ssh_key() {
     echo -e "${BLUE}Checking if public key is installed on target...${NC}"
 
     # Try to connect without password to see if key is already authorized
-    if ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+    if ssh -i "$SSH_KEY_PATH" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
         -o PasswordAuthentication=no -o BatchMode=yes \
         "${SSH_USER}@${BANANAPI_IP}" "exit 0" 2>/dev/null; then
         echo -e "${GREEN}  [OK] Public key already authorized on ${BANANAPI_IP}${NC}"
@@ -292,7 +292,7 @@ test_ssh_connection() {
     fi
 
     # Test actual SSH connectivity with a command
-    if ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+    if ssh -i "$SSH_KEY_PATH" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
         "${SSH_USER}@${BANANAPI_IP}" "echo 'SSH connection successful'" 2>/dev/null; then
         echo -e "${GREEN}  [OK] SSH connection to ${BANANAPI_IP} successful${NC}"
     else
