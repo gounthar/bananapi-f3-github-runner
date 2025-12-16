@@ -94,8 +94,11 @@ prompt_config() {
     # GitHub PAT
     echo ""
     echo "GitHub Personal Access Token (PAT)"
-    echo "  Required scopes: repo, workflow"
-    echo "  Create at: https://github.com/settings/tokens"
+    echo -e "  Required scopes: ${YELLOW}repo${NC}, ${YELLOW}workflow${NC}"
+    echo ""
+    echo "  Don't have one? Create at:"
+    echo -e "  ${BLUE}https://github.com/settings/tokens/new?scopes=repo,workflow&description=bananapi-f3-runner${NC}"
+    echo ""
     read -sp "GitHub PAT [hidden]: " input
     echo ""
     if [ -n "$input" ]; then
