@@ -83,8 +83,8 @@ prompt_config() {
 
     # GitHub Repository
     echo -e "${YELLOW}GitHub Configuration${NC}"
-    read -p "GitHub Repository (e.g., username/repo) [${GITHUB_REPOSITORY:-}]: " input
-    GITHUB_REPOSITORY="${input:-$GITHUB_REPOSITORY}"
+    read -p "GitHub Repository (e.g., username/repo) [${GITHUB_REPOSITORY:-gounthar/docker-for-riscv64}]: " input
+    GITHUB_REPOSITORY="${input:-${GITHUB_REPOSITORY:-gounthar/docker-for-riscv64}}"
 
     if [ -z "$GITHUB_REPOSITORY" ]; then
         echo -e "${RED}Error: GitHub repository is required${NC}"
