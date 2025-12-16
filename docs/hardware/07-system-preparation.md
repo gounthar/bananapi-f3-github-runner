@@ -578,8 +578,9 @@ sudo apt install python3-pip
 # Method 1: ensurepip module
 python3 -m ensurepip --default-pip --upgrade
 
-# Method 2: get-pip.py bootstrap
-curl -sS https://bootstrap.pypa.io/get-pip.py | python3
+# Method 2: get-pip.py bootstrap (download, inspect, then run)
+curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py
 ```
 
 ### Sudo Password Prompts

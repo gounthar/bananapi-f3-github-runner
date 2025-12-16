@@ -218,8 +218,8 @@ setup_ssh_key() {
             mkdir -p "$(dirname "$SSH_KEY_PATH")"
             chmod 700 "$(dirname "$SSH_KEY_PATH")"
 
-            # Generate ed25519 key (more secure and shorter than RSA)
-            ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -C "bananapi-f3-runner@$(hostname)"
+            # Generate ed25519 key without passphrase (for automation)
+            ssh-keygen -t ed25519 -N '' -f "$SSH_KEY_PATH" -C "bananapi-f3-runner@$(hostname)"
 
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}  [OK] SSH key pair created${NC}"
