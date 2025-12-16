@@ -24,9 +24,10 @@
     name:
       - docker.io
       - docker-cli
+      - docker-compose
+      - docker-buildx-plugin
       - containerd
       - runc
-      - buildkit
       - cagent
     state: present
     update_cache: yes
