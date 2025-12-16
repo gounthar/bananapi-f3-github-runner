@@ -81,7 +81,7 @@ pip3 not installed
 ```
 
 ✅ **Python 3.13.5 installed** (excellent, very modern!)
-❌ **pip3 not installed** (needed for package management)
+❌ **pip3 not installed** (this is normal on Debian Trixie - will be installed in Step 3 below)
 
 ### Step 3: Check Disk Space
 
@@ -169,7 +169,7 @@ sudo apt install -y \
 **What each package provides:**
 
 **Python ecosystem:**
-- `python3-pip` - Python package installer (pip)
+- `python3-pip` - Python package installer (pip) - **not installed by default on Debian Trixie!**
 - `python3-venv` - Virtual environment support
 
 **Version control:**
@@ -554,6 +554,32 @@ python3 --version
 
 # Create symlink if needed
 sudo ln -s /usr/bin/python3 /usr/bin/python
+```
+
+### pip Not Found (Debian Trixie)
+
+**On Debian 13 (Trixie), pip is NOT installed by default** even though Python 3.13 is:
+
+```bash
+$ pip3 --version
+-bash: pip3: command not found
+```
+
+**Solution:**
+
+```bash
+sudo apt update
+sudo apt install python3-pip
+```
+
+**Alternative methods** (if package unavailable):
+
+```bash
+# Method 1: ensurepip module
+python3 -m ensurepip --default-pip --upgrade
+
+# Method 2: get-pip.py bootstrap
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3
 ```
 
 ### Sudo Password Prompts
