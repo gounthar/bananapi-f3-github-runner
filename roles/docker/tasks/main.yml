@@ -22,6 +22,16 @@
     path: /usr/share/keyrings/docker-riscv64.gpg
     mode: '0644'
 
+- name: Remove old Docker APT repository (if exists with different key)
+  file:
+    path: /etc/apt/sources.list.d/docker-riscv64.list
+    state: absent
+
+- name: Remove old GPG key (if exists)
+  file:
+    path: /etc/apt/keyrings/docker-riscv64.asc
+    state: absent
+
 - name: Add RISC-V64 Docker APT repository
   apt_repository:
     repo: "deb [arch=riscv64 signed-by=/usr/share/keyrings/docker-riscv64.gpg] https://gounthar.github.io/docker-for-riscv64 trixie main"
