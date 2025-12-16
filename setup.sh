@@ -123,6 +123,13 @@ prompt_config() {
     read -p "SSH Username [${SSH_USER:-poddingue}]: " input
     SSH_USER="${input:-${SSH_USER:-poddingue}}"
 
+    # SSH Key Path
+    local default_key="${SSH_KEY_PATH:-${HOME}/.ssh/bananapi-f3}"
+    read -p "SSH Private Key Path [${default_key}]: " input
+    SSH_KEY_PATH="${input:-${default_key}}"
+    # Expand ~ to $HOME if present
+    SSH_KEY_PATH="${SSH_KEY_PATH/#\~/$HOME}"
+
     # Runner working directory
     read -p "Runner Working Directory [${RUNNER_WORKDIR:-/home/${SSH_USER}/github-act-runner}]: " input
     RUNNER_WORKDIR="${input:-${RUNNER_WORKDIR:-/home/${SSH_USER}/github-act-runner}}"
@@ -187,25 +194,105 @@ validate_github_pat() {
 }
 
 #------------------------------------------------------------------------------
+# Setup SSH key (create if missing, copy to target)
+#------------------------------------------------------------------------------
+setup_ssh_key() {
+    echo -e "${BLUE}Checking SSH key...${NC}"
+
+    # Check if private key exists
+    if [ -f "$SSH_KEY_PATH" ]; then
+        echo -e "${GREEN}  [OK] SSH key found: ${SSH_KEY_PATH}${NC}"
+    else
+        echo -e "${YELLOW}  [!] SSH key not found: ${SSH_KEY_PATH}${NC}"
+        echo ""
+        read -p "Would you like to create a new SSH key pair? [Y/n]: " create_key
+
+        if [[ ! "$create_key" =~ ^[Nn] ]]; then
+            echo ""
+            echo -e "${BLUE}Creating SSH key pair...${NC}"
+
+            # Create .ssh directory if it doesn't exist
+            mkdir -p "$(dirname "$SSH_KEY_PATH")"
+            chmod 700 "$(dirname "$SSH_KEY_PATH")"
+
+            # Generate ed25519 key (more secure and shorter than RSA)
+            ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -C "bananapi-f3-runner@$(hostname)"
+
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}  [OK] SSH key pair created${NC}"
+                echo "  Private key: ${SSH_KEY_PATH}"
+                echo "  Public key:  ${SSH_KEY_PATH}.pub"
+            else
+                echo -e "${RED}  [FAIL] Failed to create SSH key${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${RED}Cannot proceed without SSH key.${NC}"
+            echo "Please create a key manually or specify an existing key path."
+            exit 1
+        fi
+    fi
+
+    # Check if public key needs to be copied to target
+    echo ""
+    echo -e "${BLUE}Checking if public key is installed on target...${NC}"
+
+    # Try to connect without password to see if key is already authorized
+    if ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+        -o PasswordAuthentication=no -o BatchMode=yes \
+        "${SSH_USER}@${BANANAPI_IP}" "exit 0" 2>/dev/null; then
+        echo -e "${GREEN}  [OK] Public key already authorized on ${BANANAPI_IP}${NC}"
+    else
+        echo -e "${YELLOW}  [!] Public key not yet authorized on target${NC}"
+        echo ""
+        echo "To copy your public key to the Banana Pi F3, run:"
+        echo ""
+        echo -e "${BLUE}  ssh-copy-id -i ${SSH_KEY_PATH}.pub ${SSH_USER}@${BANANAPI_IP}${NC}"
+        echo ""
+        read -p "Would you like to run ssh-copy-id now? [Y/n]: " copy_key
+
+        if [[ ! "$copy_key" =~ ^[Nn] ]]; then
+            echo ""
+            echo -e "${BLUE}Copying public key to ${BANANAPI_IP}...${NC}"
+            echo "(You may be prompted for the password on the Banana Pi F3)"
+            echo ""
+
+            ssh-copy-id -i "${SSH_KEY_PATH}.pub" "${SSH_USER}@${BANANAPI_IP}"
+
+            if [ $? -eq 0 ]; then
+                echo ""
+                echo -e "${GREEN}  [OK] Public key copied successfully${NC}"
+            else
+                echo ""
+                echo -e "${RED}  [FAIL] Failed to copy public key${NC}"
+                echo "Please copy it manually and run this script again."
+                exit 1
+            fi
+        else
+            echo ""
+            echo -e "${YELLOW}Please copy the key manually before continuing.${NC}"
+            read -p "Press Enter when ready, or Ctrl+C to abort..."
+        fi
+    fi
+
+    echo ""
+}
+
+#------------------------------------------------------------------------------
 # Test SSH connectivity
 #------------------------------------------------------------------------------
 test_ssh_connection() {
     echo -e "${BLUE}Testing SSH connection to Banana Pi F3...${NC}"
 
-    local ssh_key="${HOME}/.ssh/bananapi-f3"
-
-    if [ ! -f "$ssh_key" ]; then
-        ssh_key="${HOME}/.ssh/id_rsa"
-        if [ ! -f "$ssh_key" ]; then
-            echo -e "${RED}  [FAIL] No SSH key found at ~/.ssh/bananapi-f3 or ~/.ssh/id_rsa${NC}"
-            echo "  Please set up SSH key authentication first."
-            exit 1
-        fi
+    # SSH_KEY_PATH is set by prompt_config() and validated by setup_ssh_key()
+    if [ ! -f "$SSH_KEY_PATH" ]; then
+        echo -e "${RED}  [FAIL] SSH key not found: ${SSH_KEY_PATH}${NC}"
+        echo "  Please run setup_ssh_key first or check the key path."
+        exit 1
     fi
 
-    # Use accept-new to accept keys on first connection but reject if host key changes
-    # This is more secure than StrictHostKeyChecking=no which disables verification entirely
-    if ssh -i "$ssh_key" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+    # Test actual SSH connectivity with a command
+    if ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
         "${SSH_USER}@${BANANAPI_IP}" "echo 'SSH connection successful'" 2>/dev/null; then
         echo -e "${GREEN}  [OK] SSH connection to ${BANANAPI_IP} successful${NC}"
     else
@@ -254,8 +341,8 @@ BANANAPI_IP=${BANANAPI_IP}
 # SSH user for Ansible connections
 SSH_USER=${SSH_USER}
 
-# SSH key path (optional, uses default if not set)
-SSH_KEY_PATH=~/.ssh/bananapi-f3
+# SSH key path for Ansible connections
+SSH_KEY_PATH=${SSH_KEY_PATH}
 
 # Optional: Docker Hub Configuration
 # Only needed if you're pulling private images
@@ -350,6 +437,7 @@ main() {
     load_existing_config
     prompt_config
     validate_github_pat
+    setup_ssh_key
     test_ssh_connection
     save_config
 
