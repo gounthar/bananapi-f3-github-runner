@@ -394,6 +394,8 @@ EOF
 run_ansible() {
     echo -e "${BLUE}Running Ansible playbook...${NC}"
     echo ""
+    echo -e "${YELLOW}Note: 'BECOME password' = sudo password on the Banana Pi F3${NC}"
+    echo ""
 
     cd "$SCRIPT_DIR"
 
