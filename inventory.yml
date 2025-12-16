@@ -4,8 +4,9 @@ all:
     bananapi-f3:
       ansible_host: "{{ lookup('env', 'BANANAPI_IP') | default('192.168.1.185', true) }}"
       ansible_user: "{{ lookup('env', 'SSH_USER') | default('poddingue', true) }}"
+      ansible_ssh_private_key_file: "{{ lookup('env', 'SSH_KEY_PATH') | default('~/.ssh/bananapi-f3', true) }}"
       ansible_python_interpreter: /usr/bin/python3
-      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+      ansible_ssh_common_args: '-o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new'
 
   vars:
     # GitHub Configuration
