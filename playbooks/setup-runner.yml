@@ -12,6 +12,8 @@
           - github_pat is defined and github_pat != ''
         fail_msg: "GitHub repository and PAT must be set in .env file"
 
+    # Note: These cleanups are duplicated in roles/docker/tasks/main.yml
+    # to ensure old Docker sources don't interfere with apt cache updates
     - name: Remove conflicting Docker repo file (if exists)
       file:
         path: /etc/apt/sources.list.d/docker-riscv64.list

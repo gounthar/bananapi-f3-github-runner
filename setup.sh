@@ -213,15 +213,14 @@ setup_ssh_key() {
         if [[ ! "$create_key" =~ ^[Nn] ]]; then
             echo ""
             echo -e "${BLUE}Creating SSH key pair...${NC}"
+            echo -e "${YELLOW}Note: Key will be created without passphrase for automation${NC}"
 
             # Create .ssh directory if it doesn't exist
             mkdir -p "$(dirname "$SSH_KEY_PATH")"
             chmod 700 "$(dirname "$SSH_KEY_PATH")"
 
             # Generate ed25519 key without passphrase (for automation)
-            ssh-keygen -t ed25519 -N '' -f "$SSH_KEY_PATH" -C "bananapi-f3-runner@$(hostname)"
-
-            if [ $? -eq 0 ]; then
+            if ssh-keygen -t ed25519 -N '' -f "$SSH_KEY_PATH" -C "bananapi-f3-runner@$(hostname)"; then
                 echo -e "${GREEN}  [OK] SSH key pair created${NC}"
                 echo "  Private key: ${SSH_KEY_PATH}"
                 echo "  Public key:  ${SSH_KEY_PATH}.pub"
@@ -260,9 +259,7 @@ setup_ssh_key() {
             echo "(You may be prompted for the password on the Banana Pi F3)"
             echo ""
 
-            ssh-copy-id -o IdentitiesOnly=yes -i "${SSH_KEY_PATH}.pub" "${SSH_USER}@${BANANAPI_IP}"
-
-            if [ $? -eq 0 ]; then
+            if ssh-copy-id -o IdentitiesOnly=yes -i "${SSH_KEY_PATH}.pub" "${SSH_USER}@${BANANAPI_IP}"; then
                 echo ""
                 echo -e "${GREEN}  [OK] Public key copied successfully${NC}"
             else
