@@ -148,7 +148,20 @@ sudo apt install -y gh
 # sudo apt install -y gh
 ```
 
-### 6. Install Utilities
+### 6. Install Python and pip
+
+**Important**: On Debian 13 (Trixie), Python 3.13 is pre-installed but pip is not.
+
+```bash
+# Install pip and virtual environment support
+sudo apt install -y python3-pip python3-venv
+
+# Verify installation
+python3 --version   # Python 3.13.5
+pip3 --version      # pip 25.1.1
+```
+
+### 7. Install Utilities
 
 ```bash
 sudo apt install -y curl wget jq htop tmux vim nano \
@@ -382,6 +395,48 @@ docker system df
 ```
 
 ## Troubleshooting
+
+### Python pip Not Found (Debian Trixie)
+
+On Debian 13 (Trixie), Python 3.13 is installed by default but **pip is not**. If you see:
+
+```bash
+$ pip3 --version
+-bash: pip3: command not found
+```
+
+**Solution:**
+
+```bash
+sudo apt update
+sudo apt install python3-pip
+```
+
+Verify installation:
+
+```bash
+pip3 --version
+# Expected: pip 25.1.1 from /usr/lib/python3/dist-packages/pip (python 3.13)
+```
+
+**Alternative methods** (if `python3-pip` package is unavailable):
+
+```bash
+# Method 1: Use ensurepip
+python3 -m ensurepip --default-pip --upgrade
+
+# Method 2: Bootstrap with get-pip.py
+curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py
+```
+
+**Best practice**: Use virtual environments for Python packages:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install <packages>
+```
 
 ### Runner Not Connecting
 
