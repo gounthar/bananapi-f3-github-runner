@@ -44,11 +44,11 @@
     name:
       - docker.io
       - docker-cli
-      - docker-compose
+      - docker-compose-plugin
       - docker-buildx-plugin
       - containerd
       - runc
-      - cagent
+      - buildkit
     state: present
     update_cache: yes
 
