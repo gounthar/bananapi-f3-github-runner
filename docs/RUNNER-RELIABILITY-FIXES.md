@@ -20,7 +20,7 @@ The runner user needs passwordless sudo for specific commands to execute CI/CD o
       # Allow {{ runner_user }} passwordless sudo for CI/CD operations
       # Scoped to specific commands for security (not ALL)
       # See docs/RUNNER-RELIABILITY-FIXES.md for security considerations
-      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker, /usr/bin/tee, /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/chown
+      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker
     dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
     mode: '0440'
     validate: 'visudo -cf %s'
@@ -92,23 +92,7 @@ Both runners should have identical configuration:
 | Runner User | poddingue |
 | Service Name | github-runner |
 | Service Enabled | yes |
-| Sudo NOPASSWD | Scoped (apt-get, apt, dpkg, systemctl, docker, tee, mkdir, chmod, chown) |
-
-## Diagnostic Workflow
-
-A diagnostic workflow exists at `.github/workflows/runner-diagnostics.yml` in the docker-for-riscv64 repository. Run it to compare runner configurations:
-
-```bash
-gh workflow run runner-diagnostics.yml
-```
-
-This runs on both runners simultaneously and collects:
-- OS information
-- Disk space and memory
-- APT lock status
-- Installed packages
-- Sudo configuration
-- Network connectivity
+| Sudo NOPASSWD | Scoped (apt-get, apt, dpkg, systemctl, docker) |
 
 ## Security Considerations
 
@@ -131,10 +115,6 @@ The following commands are allowed without password:
 | `/usr/bin/dpkg` | Debian package operations |
 | `/usr/bin/systemctl` | Service management (restart runner) |
 | `/usr/bin/docker` | Container operations (backup for non-group access) |
-| `/usr/bin/tee` | Write to protected files |
-| `/usr/bin/mkdir` | Create directories |
-| `/usr/bin/chmod` | Change file permissions |
-| `/usr/bin/chown` | Change file ownership |
 
 ### If Workflows Require Additional Commands
 
