@@ -71,8 +71,8 @@ Add verification tasks using the systemd module with retry logic to handle trans
 After applying the playbook, verify on each runner:
 
 ```bash
-# Check passwordless sudo works (doesn't modify system state)
-sudo -n true
+# Check passwordless sudo works (uses whitelisted command, doesn't modify system state)
+sudo -n apt-get --version
 
 # Check service status
 systemctl status github-runner

@@ -128,6 +128,9 @@
     content: |
       # Allow {{ runner_user }} passwordless sudo for CI/CD operations
       # Scoped to specific commands for security (not ALL)
+      # apt-get/apt/dpkg: package installation in build workflows
+      # systemctl: runner service management and auto-updates
+      # docker: container operations in build/test workflows
       # See docs/RUNNER-RELIABILITY-FIXES.md for security considerations
       {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker
     dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
@@ -140,7 +143,7 @@
     state: absent
 
 - name: Verify passwordless sudo is working
-  command: sudo -n true
+  command: sudo -n apt-get --version
   become: true
   become_user: "{{ runner_user }}"
   changed_when: false
