@@ -16,11 +16,14 @@ The runner user needs `NOPASSWD: ALL` to execute CI/CD commands without hanging 
 ```yaml
 - name: Configure passwordless sudo for runner user
   copy:
+    content: |
+      # Allow {{ runner_user }} passwordless sudo for CI/CD operations
+      # Required for: apt-get installs, docker commands, service management
+      # See docs/RUNNER-RELIABILITY-FIXES.md for rationale
+      {{ runner_user }} ALL=(ALL) NOPASSWD: ALL
     dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
-    content: "{{ runner_user }} ALL=(ALL) NOPASSWD: ALL\n"
     mode: '0440'
     validate: 'visudo -cf %s'
-  become: true
 ```
 
 **Important:** Using a drop-in file in `/etc/sudoers.d/` is preferred over editing `/etc/sudoers` directly.
