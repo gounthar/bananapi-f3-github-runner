@@ -104,7 +104,6 @@
   until: runner_service_active.status.ActiveState == 'active'
   retries: 3
   delay: 5
-  failed_when: runner_service_active.status.ActiveState != 'active'
 
 # Weekly auto-update for github-act-runner
 - name: Deploy runner update script

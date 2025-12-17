@@ -62,10 +62,9 @@ Add verification tasks using the systemd module with retry logic to handle trans
   until: runner_service_active.status.ActiveState == 'active'
   retries: 3
   delay: 5
-  failed_when: runner_service_active.status.ActiveState != 'active'
 ```
 
-**Note:** The retry logic (3 attempts, 5 second delay) handles transient states during service startup.
+**Note:** The retry logic (3 attempts, 5-second delay) handles transient states during service startup. The `until` clause will automatically fail after all retries are exhausted.
 
 ## Verification Commands
 
