@@ -449,7 +449,7 @@ main() {
     if [[ "$confirm" =~ ^[Nn] ]]; then
         echo "Aborted. Configuration saved to .env"
         echo "Run this script again or manually run:"
-        echo "  source .env && ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-runner.yml"
+        echo "  (cd \"${SCRIPT_DIR}\" && set -a && source .env && ANSIBLE_ROLES_PATH=./roles ansible-playbook -i inventory.yml playbooks/setup-runner.yml --ask-become-pass)"
         exit 0
     fi
 
