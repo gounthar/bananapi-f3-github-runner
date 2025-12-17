@@ -92,16 +92,19 @@
 # Verification tasks to ensure runner reliability after reboots
 # See docs/RUNNER-RELIABILITY-FIXES.md for background
 - name: Verify runner service is enabled for auto-start
-  command: systemctl is-enabled github-runner
-  register: runner_enabled
-  changed_when: false
-  failed_when: runner_enabled.stdout | trim != 'enabled'
+  systemd:
+    name: github-runner
+  register: runner_service_status
+  failed_when: runner_service_status.status.UnitFileState != 'enabled'
 
 - name: Verify runner service is currently active
-  command: systemctl is-active github-runner
-  register: runner_active
-  changed_when: false
-  failed_when: runner_active.stdout | trim != 'active'
+  systemd:
+    name: github-runner
+  register: runner_service_active
+  until: runner_service_active.status.ActiveState == 'active'
+  retries: 3
+  delay: 5
+  failed_when: runner_service_active.status.ActiveState != 'active'
 
 # Weekly auto-update for github-act-runner
 - name: Deploy runner update script
@@ -139,6 +142,7 @@
 
 - name: Verify passwordless sudo is working
   command: sudo -n true
+  become: true
   become_user: "{{ runner_user }}"
   changed_when: false
   register: sudo_check

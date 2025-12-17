@@ -46,21 +46,26 @@ Ensure the service starts automatically on boot and is currently running.
 
 ### 3. Verify Service Configuration
 
-Add a verification task to confirm the service is properly configured:
+Add verification tasks using the systemd module with retry logic to handle transient states:
 
 ```yaml
-- name: Verify runner service is enabled
-  command: systemctl is-enabled github-runner
-  register: runner_enabled
-  changed_when: false
-  failed_when: runner_enabled.stdout | trim != 'enabled'
+- name: Verify runner service is enabled for auto-start
+  systemd:
+    name: github-runner
+  register: runner_service_status
+  failed_when: runner_service_status.status.UnitFileState != 'enabled'
 
-- name: Verify runner service is active
-  command: systemctl is-active github-runner
-  register: runner_active
-  changed_when: false
-  failed_when: runner_active.stdout | trim != 'active'
+- name: Verify runner service is currently active
+  systemd:
+    name: github-runner
+  register: runner_service_active
+  until: runner_service_active.status.ActiveState == 'active'
+  retries: 3
+  delay: 5
+  failed_when: runner_service_active.status.ActiveState != 'active'
 ```
+
+**Note:** The retry logic (3 attempts, 5 second delay) handles transient states during service startup.
 
 ## Verification Commands
 
