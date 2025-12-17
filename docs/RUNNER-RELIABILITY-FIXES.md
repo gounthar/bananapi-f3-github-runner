@@ -11,22 +11,24 @@ Investigation on 2025-12-17 revealed that GitHub Actions workflows were hanging 
 
 ### 1. Configure Passwordless Sudo for Runner User
 
-The runner user needs `NOPASSWD: ALL` to execute CI/CD commands without hanging on password prompts.
+The runner user needs passwordless sudo for specific commands to execute CI/CD operations without hanging on password prompts.
 
 ```yaml
 - name: Configure passwordless sudo for runner user
   copy:
     content: |
       # Allow {{ runner_user }} passwordless sudo for CI/CD operations
-      # Required for: apt-get installs, docker commands, service management
-      # See docs/RUNNER-RELIABILITY-FIXES.md for rationale
-      {{ runner_user }} ALL=(ALL) NOPASSWD: ALL
+      # Scoped to specific commands for security (not ALL)
+      # See docs/RUNNER-RELIABILITY-FIXES.md for security considerations
+      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker, /usr/bin/tee, /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/chown
     dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
     mode: '0440'
     validate: 'visudo -cf %s'
 ```
 
 **Important:** Using a drop-in file in `/etc/sudoers.d/` is preferred over editing `/etc/sudoers` directly.
+
+**Security Note:** Sudo permissions are scoped to specific commands rather than `ALL` to minimize attack surface. See [Security Considerations](#security-considerations) below.
 
 ### 2. Enable and Start GitHub Runner Service
 
@@ -51,13 +53,13 @@ Add a verification task to confirm the service is properly configured:
   command: systemctl is-enabled github-runner
   register: runner_enabled
   changed_when: false
-  failed_when: runner_enabled.stdout != 'enabled'
+  failed_when: runner_enabled.stdout | trim != 'enabled'
 
 - name: Verify runner service is active
   command: systemctl is-active github-runner
   register: runner_active
   changed_when: false
-  failed_when: runner_active.stdout != 'active'
+  failed_when: runner_active.stdout | trim != 'active'
 ```
 
 ## Verification Commands
@@ -65,8 +67,8 @@ Add a verification task to confirm the service is properly configured:
 After applying the playbook, verify on each runner:
 
 ```bash
-# Check passwordless sudo works
-sudo -n apt-get update
+# Check passwordless sudo works (doesn't modify system state)
+sudo -n true
 
 # Check service status
 systemctl status github-runner
@@ -86,7 +88,7 @@ Both runners should have identical configuration:
 | Runner User | poddingue |
 | Service Name | github-runner |
 | Service Enabled | yes |
-| Sudo NOPASSWD | ALL |
+| Sudo NOPASSWD | Scoped (apt-get, apt, dpkg, systemctl, docker, tee, mkdir, chmod, chown) |
 
 ## Diagnostic Workflow
 
@@ -103,3 +105,47 @@ This runs on both runners simultaneously and collects:
 - Installed packages
 - Sudo configuration
 - Network connectivity
+
+## Security Considerations
+
+### Why Scoped Sudo Instead of NOPASSWD: ALL
+
+Granting `NOPASSWD: ALL` to the runner user would create a significant security risk:
+
+1. **Compromised workflows**: If a malicious workflow runs on the runner, it could gain full root access
+2. **Supply chain attacks**: Dependencies pulled during CI/CD could execute arbitrary commands as root
+3. **Lateral movement**: An attacker gaining access to the runner user could escalate to full system control
+
+### Current Scoped Permissions
+
+The following commands are allowed without password:
+
+| Command | Purpose |
+|---------|---------|
+| `/usr/bin/apt-get` | Install build dependencies |
+| `/usr/bin/apt` | Package management |
+| `/usr/bin/dpkg` | Debian package operations |
+| `/usr/bin/systemctl` | Service management (restart runner) |
+| `/usr/bin/docker` | Container operations (backup for non-group access) |
+| `/usr/bin/tee` | Write to protected files |
+| `/usr/bin/mkdir` | Create directories |
+| `/usr/bin/chmod` | Change file permissions |
+| `/usr/bin/chown` | Change file ownership |
+
+### If Workflows Require Additional Commands
+
+If a workflow needs a command not in this list, you have two options:
+
+1. **Add the specific command** to the sudoers file (preferred)
+2. **Use NOPASSWD: ALL** only if you understand and accept the risks
+
+To add a command, edit `roles/github-runner/tasks/main.yml` and add it to the comma-separated list.
+
+### Additional Mitigations
+
+Even with scoped sudo, consider these additional security measures:
+
+- **Network segmentation**: Isolate runners from production systems
+- **Repository restrictions**: Limit which repositories can use the runner
+- **Workflow approval**: Require approval for workflows from external contributors
+- **Regular updates**: Keep the runner and system packages up to date

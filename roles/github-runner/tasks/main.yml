@@ -95,13 +95,13 @@
   command: systemctl is-enabled github-runner
   register: runner_enabled
   changed_when: false
-  failed_when: runner_enabled.stdout != 'enabled'
+  failed_when: runner_enabled.stdout | trim != 'enabled'
 
 - name: Verify runner service is currently active
   command: systemctl is-active github-runner
   register: runner_active
   changed_when: false
-  failed_when: runner_active.stdout != 'active'
+  failed_when: runner_active.stdout | trim != 'active'
 
 # Weekly auto-update for github-act-runner
 - name: Deploy runner update script
@@ -125,9 +125,9 @@
   copy:
     content: |
       # Allow {{ runner_user }} passwordless sudo for CI/CD operations
-      # Required for: apt-get installs, docker commands, service management
-      # See docs/RUNNER-RELIABILITY-FIXES.md for rationale
-      {{ runner_user }} ALL=(ALL) NOPASSWD: ALL
+      # Scoped to specific commands for security (not ALL)
+      # See docs/RUNNER-RELIABILITY-FIXES.md for security considerations
+      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker, /usr/bin/tee, /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/chown
     dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
     mode: '0440'
     validate: 'visudo -cf %s'
