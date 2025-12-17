@@ -89,6 +89,22 @@
   debug:
     msg: "GitHub Runner service is {{ runner_status.status.ActiveState }}"
 
+# Verification tasks to ensure runner reliability after reboots
+# See docs/RUNNER-RELIABILITY-FIXES.md for background
+- name: Verify runner service is enabled for auto-start
+  systemd:
+    name: github-runner
+  register: runner_service_status
+  failed_when: runner_service_status.status.UnitFileState != 'enabled'
+
+- name: Verify runner service is currently active
+  systemd:
+    name: github-runner
+  register: runner_service_active
+  until: runner_service_active.status.ActiveState == 'active'
+  retries: 3
+  delay: 5
+
 # Weekly auto-update for github-act-runner
 - name: Deploy runner update script
   template:
@@ -107,14 +123,32 @@
     mode: '0644'
   changed_when: false
 
-- name: Allow runner user to restart github-runner service without password
+- name: Configure passwordless sudo for runner user
   copy:
     content: |
-      # Allow {{ runner_user }} to restart the github-runner service for auto-updates
-      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart github-runner
-    dest: /etc/sudoers.d/github-runner-update
+      # Allow {{ runner_user }} passwordless sudo for CI/CD operations
+      # Scoped to specific commands for security (not ALL)
+      # apt-get/apt/dpkg: package installation in build workflows
+      # systemctl: runner service management and auto-updates
+      # docker: container operations in build/test workflows
+      # See docs/RUNNER-RELIABILITY-FIXES.md for security considerations
+      {{ runner_user }} ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /usr/bin/dpkg, /usr/bin/systemctl, /usr/bin/docker
+    dest: /etc/sudoers.d/{{ runner_user }}-nopasswd
     mode: '0440'
     validate: 'visudo -cf %s'
+
+- name: Remove old limited sudoers file (if exists)
+  file:
+    path: /etc/sudoers.d/github-runner-update
+    state: absent
+
+- name: Verify passwordless sudo is working
+  command: sudo -n apt-get --version
+  become: true
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: sudo_check
+  failed_when: sudo_check.rc != 0
 
 - name: Setup weekly cron job for runner updates
   cron:
