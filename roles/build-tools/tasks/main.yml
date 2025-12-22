@@ -14,15 +14,17 @@
       - ccache
     state: present
 
-- name: Configure ccache in PATH system-wide
-  copy:
-    dest: /etc/profile.d/ccache.sh
-    content: |
-      # Add ccache to PATH for faster recompilation
-      export PATH="/usr/lib/ccache:$PATH"
-    mode: "0644"
-    owner: root
-    group: root
+- name: Enable ccache by creating compiler symlinks
+  file:
+    src: /usr/bin/ccache
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - gcc
+    - g++
+    - cc
+    - c++
 
 - name: Verify ccache installation
   command: ccache --version
@@ -34,16 +36,14 @@
   debug:
     msg: "Installed: {{ ccache_version_output.stdout_lines[0] }}"
 
-- name: Verify ccache intercepts gcc
-  shell: |
-    . /etc/profile.d/ccache.sh
-    which gcc
+- name: Verify ccache intercepts gcc via symlink
+  command: which gcc
   become_user: "{{ runner_user }}"
   changed_when: false
   register: gcc_path_output
-  failed_when: "'/usr/lib/ccache/gcc' not in gcc_path_output.stdout"
+  failed_when: "'/usr/local/bin/gcc' not in gcc_path_output.stdout"
 
-- name: Display gcc path (should be ccache wrapper)
+- name: Display gcc path (should be ccache symlink)
   debug:
     msg: "gcc path: {{ gcc_path_output.stdout }}"
 
