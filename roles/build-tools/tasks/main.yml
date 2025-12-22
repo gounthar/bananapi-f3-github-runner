@@ -14,16 +14,15 @@
       - ccache
     state: present
 
-- name: Configure ccache in PATH for runner user
-  lineinfile:
-    path: "/home/{{ runner_user }}/.bashrc"
-    line: 'export PATH="/usr/lib/ccache:$PATH"'
-    regexp: '^export PATH=.*/usr/lib/ccache.*'
-    state: present
-    create: true
-    owner: "{{ runner_user }}"
-    group: "{{ runner_user }}"
+- name: Configure ccache in PATH system-wide
+  copy:
+    dest: /etc/profile.d/ccache.sh
+    content: |
+      # Add ccache to PATH for faster recompilation
+      export PATH="/usr/lib/ccache:$PATH"
     mode: "0644"
+    owner: root
+    group: root
 
 - name: Verify ccache installation
   command: ccache --version
@@ -34,6 +33,19 @@
 - name: Display ccache version
   debug:
     msg: "Installed: {{ ccache_version_output.stdout_lines[0] }}"
+
+- name: Verify ccache intercepts gcc
+  shell: |
+    . /etc/profile.d/ccache.sh
+    which gcc
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: gcc_path_output
+  failed_when: "'/usr/lib/ccache/gcc' not in gcc_path_output.stdout"
+
+- name: Display gcc path (should be ccache wrapper)
+  debug:
+    msg: "gcc path: {{ gcc_path_output.stdout }}"
 
 - name: Install Go compiler
   apt:
