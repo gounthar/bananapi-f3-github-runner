@@ -11,7 +11,41 @@
       - automake
       - libtool
       - pkg-config
+      - ccache
     state: present
+
+- name: Enable ccache by creating compiler symlinks
+  file:
+    src: /usr/bin/ccache
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - gcc
+    - g++
+    - cc
+    - c++
+
+- name: Verify ccache installation
+  command: ccache --version
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: ccache_version_output
+
+- name: Display ccache version
+  debug:
+    msg: "Installed: {{ ccache_version_output.stdout_lines[0] }}"
+
+- name: Verify ccache intercepts gcc via symlink
+  command: which gcc
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: gcc_path_output
+  failed_when: "'/usr/local/bin/gcc' not in gcc_path_output.stdout"
+
+- name: Display gcc path (should be ccache symlink)
+  debug:
+    msg: "gcc path: {{ gcc_path_output.stdout }}"
 
 - name: Install Go compiler
   apt:
