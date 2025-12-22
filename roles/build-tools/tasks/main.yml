@@ -11,7 +11,29 @@
       - automake
       - libtool
       - pkg-config
+      - ccache
     state: present
+
+- name: Configure ccache in PATH for runner user
+  lineinfile:
+    path: "/home/{{ runner_user }}/.bashrc"
+    line: 'export PATH="/usr/lib/ccache:$PATH"'
+    regexp: '^export PATH=.*/usr/lib/ccache.*'
+    state: present
+    create: true
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: "0644"
+
+- name: Verify ccache installation
+  command: ccache --version
+  become_user: "{{ runner_user }}"
+  changed_when: false
+  register: ccache_version_output
+
+- name: Display ccache version
+  debug:
+    msg: "Installed: {{ ccache_version_output.stdout_lines[0] }}"
 
 - name: Install Go compiler
   apt:
