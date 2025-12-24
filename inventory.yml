@@ -15,7 +15,7 @@ all:
 
     # Runner Configuration
     runner_name: "{{ lookup('env', 'RUNNER_NAME') | default('bananapi-f3-runner', true) }}"
-    runner_workdir: "{{ lookup('env', 'RUNNER_WORKDIR') | default('/home/poddingue/github-act-runner-test', true) }}"
+    runner_workdir: "{{ lookup('env', 'RUNNER_WORKDIR') | default('/home/poddingue/github-act-runner', true) }}"
     runner_user: "{{ lookup('env', 'RUNNER_USER') | default('poddingue', true) }}"
     runner_version: "{{ lookup('env', 'RUNNER_VERSION') | default('main', true) }}"
 
